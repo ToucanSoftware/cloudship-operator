@@ -1,0 +1,11 @@
+domain: toucansoft.io
+layout: go.kubebuilder.io/v2
+projectName: cloudship-operator
+repo: github.com/ToucanSoftware/cloudship-operator
+resources:
+- group: cloudship
+  kind: Application
+  version: v1alpha1
+version: 3-alpha
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}
