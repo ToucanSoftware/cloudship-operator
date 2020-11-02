@@ -6,6 +6,12 @@ resources:
 - group: cloudship
   kind: Application
   version: v1alpha1
+- group: cloudship
+  kind: AppService
+  version: v1alpha1
+- group: cloudship
+  kind: AppResource
+  version: v1alpha1
 version: 3-alpha
 plugins:
   go.sdk.operatorframework.io/v2-alpha: {}

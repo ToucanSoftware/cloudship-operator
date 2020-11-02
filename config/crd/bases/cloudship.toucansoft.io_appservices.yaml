@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: applications.cloudship.toucansoft.io
+  name: appservices.cloudship.toucansoft.io
 spec:
   group: cloudship.toucansoft.io
   names:
-    kind: Application
-    listKind: ApplicationList
-    plural: applications
-    singular: application
+    kind: AppService
+    listKind: AppServiceList
+    plural: appservices
+    singular: appservice
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: Application is the Schema for the applications API
+      description: AppService is the Schema for the appservices API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -34,21 +34,32 @@ spec:
         metadata:
           type: object
         spec:
-          description: ApplicationSpec defines the desired state of Application
+          description: AppServiceSpec defines the desired state of AppService
           properties:
-            description:
-              description: Description is the name of the application
-              type: string
-            name:
-              description: Name is the name of the application
-              type: string
+            containers:
+              description: Containers of which this service consists.
+              items:
+                description: Container defines a OCI container
+                properties:
+                  image:
+                    description: Image this container should run. Must be a path-like
+                      or URI-like representation of an OCI image. May be prefixed
+                      with a registry address and should be suffixed with a tag.
+                    type: string
+                  name:
+                    description: Name of this container. Must be unique within its
+                      service.
+                    type: string
+                required:
+                - image
+                - name
+                type: object
+              type: array
+          required:
+          - containers
           type: object
         status:
-          description: ApplicationStatus defines the observed state of Application
-          properties:
-            description:
-              description: Deployment is the status of the deployment of the application
-              type: string
+          description: AppServiceStatus defines the observed state of AppService
           type: object
       type: object
   version: v1alpha1

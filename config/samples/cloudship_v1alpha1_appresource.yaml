@@ -1,0 +1,7 @@
+apiVersion: cloudship.toucansoft.io/v1alpha1
+kind: AppResource
+metadata:
+  name: appresource-sample
+spec:
+  # Add fields here
+  foo: bar

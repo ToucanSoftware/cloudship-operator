@@ -12,7 +12,7 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= docker.pkg.github.com/toucansoftware/cloudship-operator/docker.pkg.github.com/toucansoftware/cloudship-operator/cloudship-operator:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -50,6 +50,23 @@ deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
+render: manifests kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default
+
+# Delete local generated resources
+local-deploy: 
+	kubectl apply -f deploy/crds.yaml && kubectl apply -f deploy/catalog.yaml && kubectl apply -f deploy/deploy.yaml
+
+# Delete local generated resources
+local-undeploy: 
+	kubectl delete -f deploy/deploy.yaml && kubectl delete -f deploy/catalog.yaml && kubectl delete -f deploy/crds.yaml
+
+# Undeploy controller in the configured Kubernetes cluster in ~/.kube/config
+undeploy: manifests kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | kubectl delete -f -
+
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
@@ -67,7 +84,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-docker-build: test
+docker-build: 
 	docker build . -t ${IMG}
 
 # Push the docker image

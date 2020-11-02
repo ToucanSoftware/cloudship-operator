@@ -30,8 +30,8 @@ type ApplicationSpec struct {
 
 // ApplicationStatus defines the observed state of Application
 type ApplicationStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Deployment is the status of the deployment of the application
+	Deployment string `json:"description,omitempty"`
 }
 
 // +kubebuilder:object:root=true
