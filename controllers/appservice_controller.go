@@ -70,7 +70,15 @@ func (r *AppServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		// r.record.Event(eventObj, event.Warning(errRenderWorkload, err))
 		return ReconcileWaitResult, client.IgnoreNotFound(err)
 	}
-	_ = deploy
+
+	// server side apply, only the fields we set are touched
+	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner(appService.GetUID())}
+	if err := r.Patch(ctx, deploy, client.Apply, applyOpts...); err != nil {
+		log.Error(err, "Failed to apply to a deployment")
+		//r.record.Event(eventObj, event.Warning(errApplyDeployment, err))
+		return ReconcileWaitResult, client.IgnoreNotFound(err)
+	}
+
 	return ctrl.Result{}, nil
 }
 

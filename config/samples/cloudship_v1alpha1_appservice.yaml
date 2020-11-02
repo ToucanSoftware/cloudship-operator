@@ -1,7 +1,9 @@
 apiVersion: cloudship.toucansoft.io/v1alpha1
 kind: AppService
 metadata:
-  name: appservice-sample
+  name: sample
 spec:
   # Add fields here
-  foo: bar
+  containers:
+  - name: backend
+    image: nginx
