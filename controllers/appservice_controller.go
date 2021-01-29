@@ -1,5 +1,5 @@
 /*
-Copyright © 2020 ToucanSoftware
+Copyright 2021 ToucanSoftware.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -51,8 +51,7 @@ var (
 // +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=appservices/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
-func (r *AppServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("appservice", req.NamespacedName)
 	log.Info("Reconcile container workload")
 
@@ -82,7 +81,7 @@ func (r *AppServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	return ctrl.Result{}, nil
 }
 
-// SetupWithManager setups up k8s controller.
+// SetupWithManager sets up the controller with the Manager.
 func (r *AppServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cloudshipv1alpha1.AppService{}).

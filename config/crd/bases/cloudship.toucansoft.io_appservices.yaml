@@ -1,10 +1,10 @@
 
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.3.0
+    controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
   name: appservices.cloudship.toucansoft.io
 spec:
@@ -15,58 +15,57 @@ spec:
     plural: appservices
     singular: appservice
   scope: Namespaced
-  subresources:
-    status: {}
-  validation:
-    openAPIV3Schema:
-      description: AppService is the Schema for the appservices API
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: AppServiceSpec defines the desired state of AppService
-          properties:
-            containers:
-              description: Containers of which this service consists.
-              items:
-                description: Container defines a OCI container
-                properties:
-                  image:
-                    description: Image this container should run. Must be a path-like
-                      or URI-like representation of an OCI image. May be prefixed
-                      with a registry address and should be suffixed with a tag.
-                    type: string
-                  name:
-                    description: Name of this container. Must be unique within its
-                      service.
-                    type: string
-                required:
-                - image
-                - name
-                type: object
-              type: array
-          required:
-          - containers
-          type: object
-        status:
-          description: AppServiceStatus defines the observed state of AppService
-          type: object
-      type: object
-  version: v1alpha1
   versions:
   - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AppService is the Schema for the appservices API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AppServiceSpec defines the desired state of AppService
+            properties:
+              containers:
+                description: Containers of which this service consists.
+                items:
+                  description: Container defines a OCI container
+                  properties:
+                    image:
+                      description: Image this container should run. Must be a path-like
+                        or URI-like representation of an OCI image. May be prefixed
+                        with a registry address and should be suffixed with a tag.
+                      type: string
+                    name:
+                      description: Name of this container. Must be unique within its
+                        service.
+                      type: string
+                  required:
+                  - image
+                  - name
+                  type: object
+                type: array
+            required:
+            - containers
+            type: object
+          status:
+            description: AppServiceStatus defines the observed state of AppService
+            type: object
+        type: object
     served: true
     storage: true
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""
