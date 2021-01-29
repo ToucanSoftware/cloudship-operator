@@ -1,17 +1,21 @@
 domain: toucansoft.io
-layout: go.kubebuilder.io/v2
+layout: go.kubebuilder.io/v3
 projectName: cloudship-operator
 repo: github.com/ToucanSoftware/cloudship-operator
 resources:
-- group: cloudship
+- crdVersion: v1
+  group: cloudship
   kind: Application
   version: v1alpha1
-- group: cloudship
+- crdVersion: v1
+  group: cloudship
   kind: AppService
   version: v1alpha1
-- group: cloudship
+- crdVersion: v1
+  group: cloudship
   kind: AppResource
   version: v1alpha1
 version: 3-alpha
 plugins:
-  go.sdk.operatorframework.io/v2-alpha: {}
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}

@@ -21,6 +21,12 @@ rules:
 - apiGroups:
   - cloudship.toucansoft.io
   resources:
+  - applications/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - cloudship.toucansoft.io
+  resources:
   - applications/status
   verbs:
   - get
@@ -38,6 +44,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - cloudship.toucansoft.io
+  resources:
+  - appresources/finalizers
+  verbs:
+  - update
 - apiGroups:
   - cloudship.toucansoft.io
   resources:
