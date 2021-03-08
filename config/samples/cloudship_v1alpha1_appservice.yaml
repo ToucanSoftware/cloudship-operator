@@ -1,7 +1,11 @@
 apiVersion: cloudship.toucansoft.io/v1alpha1
 kind: AppService
 metadata:
-  name: appservice-sample
+  name: nginx
 spec:
-  # Add fields here
-  foo: bar
+  containers:
+    - name: foo
+      image: nginx
+      ports:
+        - name: http
+          portNumber: 80

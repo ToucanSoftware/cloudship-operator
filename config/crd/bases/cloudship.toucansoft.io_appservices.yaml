@@ -50,9 +50,28 @@ spec:
                       description: Name of this container. Must be unique within its
                         service.
                       type: string
+                    ports:
+                      description: Ports are the ports that this container exposes
+                      items:
+                        description: Service defines an Application Service
+                        properties:
+                          name:
+                            description: Name of this service. Must be unique within
+                              its service.
+                            type: string
+                          portNumber:
+                            description: Port is the number of the port
+                            format: int32
+                            type: integer
+                        required:
+                        - name
+                        - portNumber
+                        type: object
+                      type: array
                   required:
                   - image
                   - name
+                  - ports
                   type: object
                 type: array
             required:

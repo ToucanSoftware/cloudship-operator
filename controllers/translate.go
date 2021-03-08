@@ -103,17 +103,17 @@ func TranslateContainer(ctx context.Context, as *cloudshipv1alpha1.AppService) (
 
 				}
 			}*/
-		/*
-			for _, p := range container.Ports {
-				port := corev1.ContainerPort{
-					Name:          p.Name,
-					ContainerPort: p.Port,
-				}
-				if p.Protocol != nil {
-					port.Protocol = corev1.Protocol(*p.Protocol)
-				}
-				kubernetesContainer.Ports = append(kubernetesContainer.Ports, port)
-			}*/
+
+		for _, p := range container.Ports {
+			port := corev1.ContainerPort{
+				Name:          p.Name,
+				ContainerPort: p.Port,
+			}
+			// if p.Protocol != nil {
+			// 	port.Protocol = corev1.Protocol(*p.Protocol)
+			// }
+			kubernetesContainer.Ports = append(kubernetesContainer.Ports, port)
+		}
 		/*
 			for _, e := range container.Environment {
 				if e.Value != nil {
