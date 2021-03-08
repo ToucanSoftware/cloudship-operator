@@ -20,6 +20,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Service defines an Application Service
+type Service struct {
+	// Name of this service. Must be unique within its service.
+	Name string `json:"name"`
+	// Port is the number of the port
+	Port int32 `json:"portNumber"`
+}
+
 // Container defines a OCI container
 type Container struct {
 	// Name of this container. Must be unique within its service.
@@ -29,6 +37,9 @@ type Container struct {
 	// representation of an OCI image. May be prefixed with a registry address
 	// and should be suffixed with a tag.
 	Image string `json:"image"`
+
+	// Ports are the ports that this container exposes
+	Ports []Service `json:"ports"`
 }
 
 // AppServiceSpec defines the desired state of AppService
