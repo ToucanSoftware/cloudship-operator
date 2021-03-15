@@ -34,6 +34,8 @@ var (
 	deploymentAPIVersion = appsv1.SchemeGroupVersion.String()
 	serviceKind          = reflect.TypeOf(corev1.Service{}).Name()
 	serviceAPIVersion    = corev1.SchemeGroupVersion.String()
+	namespaceKind        = reflect.TypeOf(corev1.Namespace{}).Name()
+	namespaceAPIVersion  = corev1.SchemeGroupVersion.String()
 )
 
 // Reconcile error strings.
