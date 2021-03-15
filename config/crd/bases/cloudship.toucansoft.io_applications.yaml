@@ -36,12 +36,25 @@ spec:
           spec:
             description: ApplicationSpec defines the desired state of Application
             properties:
+              cacheRef:
+                description: CacheRef is the reference to cache informacion for the
+                  applicacion
+                properties:
+                  type:
+                    description: Type is the type of the cache
+                    type: string
+                type: object
               description:
                 description: Description is the name of the application
                 type: string
-              name:
-                description: Name is the name of the application
-                type: string
+              eventStreamRef:
+                description: EventStreamRefs is the reference to event stream informacion
+                  for the applicacion
+                properties:
+                  type:
+                    description: Type is the type of the cache
+                    type: string
+                type: object
             type: object
           status:
             description: ApplicationStatus defines the observed state of Application
