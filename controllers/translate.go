@@ -23,6 +23,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
 	"github.com/ToucanSoftware/cloudship-operator/pkg/types"
@@ -241,4 +242,61 @@ func TranslateContainer(ctx context.Context, as *cloudshipv1alpha1.AppService) (
 	//util.PassLabel(w, &d.Spec.Template)
 
 	return []types.Object{d}, nil
+}
+
+// ServiceInjector adds a Service object for the first Port on the first
+// Container for the first Deployment observed in a workload translation.
+func ServiceInjector(ctx context.Context, as *cloudshipv1alpha1.AppService, objs []types.Object) ([]types.Object, error) {
+	if objs == nil {
+		return nil, nil
+	}
+
+	for _, o := range objs {
+		d, ok := o.(*appsv1.Deployment)
+		if !ok {
+			continue
+		}
+
+		// We don't add a Service if there are no containers for the Deployment.
+		// This should never happen in practice.
+		if len(d.Spec.Template.Spec.Containers) < 1 {
+			continue
+		}
+
+		s := &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       serviceKind,
+				APIVersion: serviceAPIVersion,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      d.GetName(),
+				Namespace: d.GetNamespace(),
+				Labels: map[string]string{
+					labelKey: string(as.GetUID()),
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Selector: d.Spec.Selector.MatchLabels,
+				Ports:    []corev1.ServicePort{},
+				Type:     corev1.ServiceTypeLoadBalancer,
+			},
+		}
+
+		// We only add a single Service for the Deployment, even if multiple
+		// ports or no ports are defined on the first container. This is to
+		// exclude the need for implementing garbage collection in the
+		// short-term in the case that ports are modified after creation.
+		if len(d.Spec.Template.Spec.Containers[0].Ports) > 0 {
+			s.Spec.Ports = []corev1.ServicePort{
+				{
+					Name:       d.GetName(),
+					Port:       d.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort,
+					TargetPort: intstr.FromInt(int(d.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort)),
+				},
+			}
+		}
+		objs = append(objs, s)
+		break
+	}
+	return objs, nil
 }

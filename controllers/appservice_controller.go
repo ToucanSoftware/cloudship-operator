@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
+	"github.com/ToucanSoftware/cloudship-operator/pkg/types"
 )
 
 // AppServiceReconciler reconciles a AppService object
@@ -69,11 +70,23 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		// r.record.Event(eventObj, event.Warning(errRenderWorkload, err))
 		return ReconcileWaitResult, client.IgnoreNotFound(err)
 	}
-
 	// server side apply, only the fields we set are touched
 	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner(appService.GetUID())}
 	if err := r.Patch(ctx, deploy, client.Apply, applyOpts...); err != nil {
 		log.Error(err, "Failed to apply to a deployment")
+		//r.record.Event(eventObj, event.Warning(errApplyDeployment, err))
+		return ReconcileWaitResult, client.IgnoreNotFound(err)
+	}
+
+	service, err := r.renderService(ctx, &appService, deploy)
+	if err != nil {
+		log.Error(err, "Failed to render a service")
+		//r.record.Event(eventObj, event.Warning(errRenderService, err))
+		return ReconcileWaitResult, client.IgnoreNotFound(err)
+	}
+	// server side apply the service
+	if err := r.Patch(ctx, service, client.Apply, applyOpts...); err != nil {
+		log.Error(err, "Failed to apply a service")
 		//r.record.Event(eventObj, event.Warning(errApplyDeployment, err))
 		return ReconcileWaitResult, client.IgnoreNotFound(err)
 	}
@@ -119,4 +132,30 @@ func (r *AppServiceReconciler) renderDeployment(ctx context.Context,
 	}
 
 	return deploy, nil
+}
+
+// create a corresponding service
+func (r *AppServiceReconciler) renderService(ctx context.Context,
+	appService *cloudshipv1alpha1.AppService, deploy *appsv1.Deployment) (*corev1.Service, error) {
+	// create a service for the workload
+	resources, err := ServiceInjector(ctx, appService, []types.Object{deploy})
+	if err != nil {
+		return nil, err
+	}
+	service, ok := resources[1].(*corev1.Service)
+	if !ok {
+		return nil, fmt.Errorf("internal error, service is not rendered correctly")
+	}
+	// the service injector lib doesn't set the namespace and serviceType
+	service.Namespace = appService.Namespace
+	service.Spec.Type = corev1.ServiceTypeClusterIP
+	// k8s server-side patch complains if the protocol is not set
+	for i := 0; i < len(service.Spec.Ports); i++ {
+		service.Spec.Ports[i].Protocol = corev1.ProtocolTCP
+	}
+	// always set the controller reference so that we can watch this service and
+	if err := ctrl.SetControllerReference(appService, service, r.Scheme); err != nil {
+		return nil, err
+	}
+	return service, nil
 }
