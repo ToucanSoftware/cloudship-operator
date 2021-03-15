@@ -54,8 +54,10 @@ type AppServiceStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +genclient
+// +kubebuilder:resource:path=services,scope=Namespaced,singular=service,shortName=css,categories=cloudship
 
-// AppService is the Schema for the appservices API
+// AppService is the Schema for the application services API
 type AppService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

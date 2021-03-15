@@ -6,20 +6,24 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: appresources.cloudship.toucansoft.io
+  name: resources.cloudship.toucansoft.io
 spec:
   group: cloudship.toucansoft.io
   names:
+    categories:
+    - cloudship
     kind: AppResource
     listKind: AppResourceList
-    plural: appresources
-    singular: appresource
+    plural: resources
+    shortNames:
+    - csr
+    singular: resource
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: AppResource is the Schema for the appresources API
+        description: AppResource is the Schema for the application resources API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -35,11 +39,6 @@ spec:
             type: object
           spec:
             description: AppResourceSpec defines the desired state of AppResource
-            properties:
-              foo:
-                description: Foo is an example field of AppResource. Edit AppResource_types.go
-                  to remove/update
-                type: string
             type: object
           status:
             description: AppResourceStatus defines the observed state of AppResource

@@ -73,7 +73,10 @@ type ApplicationStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +genclient
+// +genclient:nonNamespaced
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster,categories=cloudship,shortName=csa
 
 // Application is the Schema for the applications API
 type Application struct {

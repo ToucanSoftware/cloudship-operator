@@ -20,16 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // AppResourceSpec defines the desired state of AppResource
 type AppResourceSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of AppResource. Edit AppResource_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
 }
 
 // AppResourceStatus defines the observed state of AppResource
@@ -40,8 +32,10 @@ type AppResourceStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +genclient
+// +kubebuilder:resource:path=resources,scope=Namespaced,singular=resource,shortName=csr,categories=cloudship
 
-// AppResource is the Schema for the appresources API
+// AppResource is the Schema for the application resources API
 type AppResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

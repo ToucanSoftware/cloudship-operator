@@ -6,20 +6,24 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: appservices.cloudship.toucansoft.io
+  name: services.cloudship.toucansoft.io
 spec:
   group: cloudship.toucansoft.io
   names:
+    categories:
+    - cloudship
     kind: AppService
     listKind: AppServiceList
-    plural: appservices
-    singular: appservice
+    plural: services
+    shortNames:
+    - css
+    singular: service
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: AppService is the Schema for the appservices API
+        description: AppService is the Schema for the application services API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

@@ -34,9 +34,9 @@ type AppResourceReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=appresources,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=appresources/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=appresources/finalizers,verbs=update
+// +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=resources,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=resources/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=resources/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

@@ -48,8 +48,8 @@ var (
 )
 
 // Reconcile reconciles a AppService object
-// +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=appservices,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=appservices/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=services/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

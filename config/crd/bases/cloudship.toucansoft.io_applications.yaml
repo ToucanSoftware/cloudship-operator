@@ -10,11 +10,15 @@ metadata:
 spec:
   group: cloudship.toucansoft.io
   names:
+    categories:
+    - cloudship
     kind: Application
     listKind: ApplicationList
     plural: applications
+    shortNames:
+    - csa
     singular: application
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:
