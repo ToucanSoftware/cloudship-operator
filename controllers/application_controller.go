@@ -29,13 +29,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
+	"github.com/ToucanSoftware/cloudship-operator/pkg/helm/release"
 )
 
 // ApplicationReconciler reconciles a Application object
 type ApplicationReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log            logr.Logger
+	Scheme         *runtime.Scheme
+	ManagerFactory release.ManagerFactory
 }
 
 // +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=applications,verbs=get;list;watch;create;update;patch;delete

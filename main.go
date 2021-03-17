@@ -33,6 +33,7 @@ import (
 
 	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
 	"github.com/ToucanSoftware/cloudship-operator/controllers"
+	"github.com/ToucanSoftware/cloudship-operator/pkg/helm/release"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -78,10 +79,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	var chartDir = "/tmp"
+
 	if err = (&controllers.ApplicationReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Application"),
-		Scheme: mgr.GetScheme(),
+		Client:         mgr.GetClient(),
+		Log:            ctrl.Log.WithName("controllers").WithName("Application"),
+		Scheme:         mgr.GetScheme(),
+		ManagerFactory: release.NewManagerFactory(mgr, chartDir),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)
