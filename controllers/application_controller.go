@@ -25,6 +25,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -35,9 +37,13 @@ import (
 // ApplicationReconciler reconciles a Application object
 type ApplicationReconciler struct {
 	client.Client
-	Log            logr.Logger
-	Scheme         *runtime.Scheme
-	ManagerFactory release.ManagerFactory
+	Log                      logr.Logger
+	Scheme                   *runtime.Scheme
+	MemecachedManagerFactory release.ManagerFactory
+	RedisManagerFactory      release.ManagerFactory
+
+	EventRecorder record.EventRecorder
+	GVK           schema.GroupVersionKind
 }
 
 // +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=applications,verbs=get;list;watch;create;update;patch;delete
@@ -52,7 +58,7 @@ type ApplicationReconciler struct {
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var err error
 	log := r.Log.WithValues("application", req.NamespacedName)
-	log.Info("Reconcilate Applicatio")
+	log.Info("Reconcilate Application")
 
 	var app cloudshipv1alpha1.Application
 
@@ -75,7 +81,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ReconcileWaitResult, client.IgnoreNotFound(err)
 	}
 
-	err = r.processCache(log, &app)
+	err = r.processCache(ctx, log, namespace, &app)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -108,12 +114,39 @@ func (r *ApplicationReconciler) renderNamespace(app *cloudshipv1alpha1.Applicati
 	}
 }
 
-func (r *ApplicationReconciler) processCache(log logr.Logger, app *cloudshipv1alpha1.Application) error {
+func (r *ApplicationReconciler) processCache(ctx context.Context, log logr.Logger, namespace *corev1.Namespace, app *cloudshipv1alpha1.Application) error {
 	if app.Spec.CacheRef == nil {
 		log.Info(fmt.Sprintf("No cache for application %s", app.GetName()))
 		return nil
 	}
 	log.Info(fmt.Sprintf("Processing cache for application %s", app.GetName()))
+
+	var overrideValues map[string]string
+	var cacheManagerFactory release.ManagerFactory
+
+	switch app.Spec.CacheRef.Type {
+	case cloudshipv1alpha1.CacheTypeMemcached:
+		cacheManagerFactory = r.MemecachedManagerFactory
+	case cloudshipv1alpha1.CacheTypeRedis:
+		cacheManagerFactory = r.RedisManagerFactory
+	default:
+		return fmt.Errorf("No Manager Factory for %v", app.Spec.CacheRef.Type)
+
+	}
+	manager, err := cacheManagerFactory.NewManager(namespace.GetName(), overrideValues)
+	if err != nil {
+		log.Error(err, "Failed to get release manager")
+		return err
+	}
+	rel, err := manager.InstallRelease(ctx)
+	if err != nil {
+		log.Error(err, "Release failed")
+		return err
+	}
+
+	//status := types.StatusFor(o)
+	log.Info(fmt.Sprintf("Cache with name %s for application %s installed", rel.Name, app.GetName()))
+
 	return nil
 }
 

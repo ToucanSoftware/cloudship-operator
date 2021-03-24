@@ -32,6 +32,8 @@ import (
 	"github.com/ToucanSoftware/cloudship-operator/pkg/helm/types"
 )
 
+type InstallOption func(*action.Install) error
+
 // Manager manages a Helm release. It can install, upgrade, reconcile,
 // and uninstall a release.
 type Manager interface {
@@ -39,7 +41,7 @@ type Manager interface {
 	IsInstalled() bool
 	IsUpgradeRequired() bool
 	Sync(context.Context) error
-	// InstallRelease(context.Context, ...InstallOption) (*rpb.Release, error)
+	InstallRelease(context.Context, ...InstallOption) (*rpb.Release, error)
 	// UpgradeRelease(context.Context, ...UpgradeOption) (*rpb.Release, *rpb.Release, error)
 	// ReconcileRelease(context.Context) (*rpb.Release, error)
 	// UninstallRelease(context.Context, ...UninstallOption) (*rpb.Release, error)
@@ -140,4 +142,39 @@ func (m manager) getCandidateRelease(namespace, name string, chart *cpb.Chart,
 	upgrade.Namespace = namespace
 	upgrade.DryRun = true
 	return upgrade.Run(name, chart, values)
+}
+
+// InstallRelease performs a Helm release install.
+func (m manager) InstallRelease(ctx context.Context, opts ...InstallOption) (*rpb.Release, error) {
+	install := action.NewInstall(m.actionConfig)
+	install.ReleaseName = m.releaseName
+	install.Namespace = m.namespace
+	for _, o := range opts {
+		if err := o(install); err != nil {
+			return nil, fmt.Errorf("failed to apply install option: %w", err)
+		}
+	}
+
+	installedRelease, err := install.Run(m.chart, m.values)
+	if err != nil {
+		// Workaround for helm/helm#3338
+		if installedRelease != nil {
+			uninstall := action.NewUninstall(m.actionConfig)
+			_, uninstallErr := uninstall.Run(m.releaseName)
+
+			// In certain cases, InstallRelease will return a partial release in
+			// the response even when it doesn't record the release in its release
+			// store (e.g. when there is an error rendering the release manifest).
+			// In that case the rollback will fail with a not found error because
+			// there was nothing to rollback.
+			//
+			// Only log a message about a rollback failure if the failure was caused
+			// by something other than the release not being found.
+			if uninstallErr != nil && !notFoundErr(uninstallErr) {
+				return nil, fmt.Errorf("failed installation (%s) and failed rollback: %w", err, uninstallErr)
+			}
+		}
+		return nil, fmt.Errorf("failed to install release: %w", err)
+	}
+	return installedRelease, nil
 }

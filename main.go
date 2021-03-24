@@ -79,13 +79,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	var chartDir = "/tmp"
-
 	if err = (&controllers.ApplicationReconciler{
-		Client:         mgr.GetClient(),
-		Log:            ctrl.Log.WithName("controllers").WithName("Application"),
-		Scheme:         mgr.GetScheme(),
-		ManagerFactory: release.NewManagerFactory(mgr, chartDir),
+		Client:                   mgr.GetClient(),
+		Log:                      ctrl.Log.WithName("controllers").WithName("Application"),
+		Scheme:                   mgr.GetScheme(),
+		MemecachedManagerFactory: release.NewMemecachedManagerFactory(mgr),
+		RedisManagerFactory:      release.NewRedisManagerFactory(mgr),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)

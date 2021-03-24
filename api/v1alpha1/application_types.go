@@ -40,8 +40,8 @@ type EventStreamSpec struct {
 type CacheType string
 
 const (
-	// CacheTypeReddis use Reddis for Cache
-	CacheTypeReddis CacheType = "Reddis"
+	// CacheTypeRedis use Redis for Cache
+	CacheTypeRedis CacheType = "Redis"
 	// CacheTypeMemcached use Memcached for Cache
 	CacheTypeMemcached CacheType = "Memcached"
 )

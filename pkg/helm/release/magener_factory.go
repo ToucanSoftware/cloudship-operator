@@ -17,23 +17,35 @@ limitations under the License.
 package release
 
 import (
+	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"gopkg.in/yaml.v2"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/cli"
+	helmgetter "helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/kube"
 	helmrelease "helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v3/pkg/repo"
 	"helm.sh/helm/v3/pkg/storage"
 	"helm.sh/helm/v3/pkg/storage/driver"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/helm/pkg/strvals"
 
 	crmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/ToucanSoftware/cloudship-operator/internal/helm/client"
-	"github.com/ToucanSoftware/cloudship-operator/pkg/helm/types"
+	"github.com/gofrs/flock"
+	"github.com/pkg/errors"
 )
 
 // ManagerFactory creates Managers that are specific to custom resources. It is
@@ -41,64 +53,44 @@ import (
 // improves decoupling between reconciliation logic and the Helm backend
 // components used to manage releases.
 type ManagerFactory interface {
-	NewManager(r *unstructured.Unstructured, overrideValues map[string]string) (Manager, error)
+	NewManager(namespace string, overrideValues map[string]string) (Manager, error)
 }
 
 type managerFactory struct {
-	mgr      crmanager.Manager
-	chartDir string
+	mgr            crmanager.Manager
+	repositoryURL  string
+	repositoryName string
+	chartName      string
+	chartVersion   string
+	releaseName    string
+	settings       *cli.EnvSettings
 }
 
-// NewManagerFactory returns a new Helm manager factory capable of installing and uninstalling releases.
-func NewManagerFactory(mgr crmanager.Manager, chartDir string) ManagerFactory {
-	return &managerFactory{
-		mgr,
-		chartDir,
-	}
-}
-
-func (f managerFactory) NewManager(cr *unstructured.Unstructured, overrideValues map[string]string) (Manager, error) {
+func (f managerFactory) NewManager(namespace string, overrideValues map[string]string) (Manager, error) {
 	// Get both v2 and v3 storage backends
 	clientv1, err := v1.NewForConfig(f.mgr.GetConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get core/v1 client: %w", err)
 	}
-	storageBackend := storage.Init(driver.NewSecrets(clientv1.Secrets(cr.GetNamespace())))
+	storageBackend := storage.Init(driver.NewSecrets(clientv1.Secrets(namespace)))
 
 	// Get the necessary clients and client getters. Use a client that injects the CR
 	// as an owner reference into all resources templated by the chart.
-	rcg, err := client.NewRESTClientGetter(f.mgr, cr.GetNamespace())
+	rcg, err := client.NewRESTClientGetter(f.mgr, namespace)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get REST client getter from manager: %w", err)
 	}
 
 	kubeClient := kube.New(rcg)
 	restMapper := f.mgr.GetRESTMapper()
-	ownerRefClient, err := client.NewOwnerRefInjectingClient(*kubeClient, restMapper, cr)
+	ownerRefClient, err := client.NewOwnerRefInjectingClient(*kubeClient, restMapper, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to inject owner references: %w", err)
 	}
-
-	crChart, err := loader.LoadDir(f.chartDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load chart dir: %w", err)
-	}
-
-	releaseName, err := getReleaseName(storageBackend, crChart.Name(), cr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get helm release name: %w", err)
-	}
-
-	crValues, ok := cr.Object["spec"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("failed to get spec: expected map[string]interface{}")
-	}
-
-	expOverrides, err := parseOverrides(overrideValues)
+	values, err := parseOverrides(overrideValues)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse override values: %w", err)
 	}
-	values := mergeMaps(crValues, expOverrides)
 
 	actionConfig := &action.Configuration{
 		RESTClientGetter: rcg,
@@ -107,17 +99,39 @@ func (f managerFactory) NewManager(cr *unstructured.Unstructured, overrideValues
 		Log:              func(_ string, _ ...interface{}) {},
 	}
 
+	err = f.addRepository()
+	if err != nil {
+		return nil, err
+	}
+	err = f.updateRepository()
+	if err != nil {
+		return nil, err
+	}
+	installAction := action.NewInstall(actionConfig)
+	installAction.ChartPathOptions.Version = f.chartVersion
+	cp, err := installAction.ChartPathOptions.LocateChart(fmt.Sprintf("%s/%s", f.repositoryName, f.chartName), f.settings)
+	if err != nil {
+		return nil, err
+	}
+	crChart, err := loader.Load(cp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load chart dir: %w", err)
+	}
+	releaseName, err := getReleaseName(storageBackend, crChart.Name(), f.releaseName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get helm release name: %w", err)
+	}
 	return &manager{
 		actionConfig:   actionConfig,
 		storageBackend: storageBackend,
 		kubeClient:     ownerRefClient,
 
 		releaseName: releaseName,
-		namespace:   cr.GetNamespace(),
+		namespace:   namespace,
 
 		chart:  crChart,
 		values: values,
-		status: types.StatusFor(cr),
+		//status: types.StatusFor(cr),
 	}, nil
 }
 
@@ -138,9 +152,9 @@ func (f managerFactory) NewManager(cr *unstructured.Unstructured, overrideValues
 //   collision. As is, the only indication of collision will be in the CR status
 //   and operator logs.
 func getReleaseName(storageBackend *storage.Storage, crChartName string,
-	cr *unstructured.Unstructured) (string, error) {
-	// If a release with the CR name does not exist, return the CR name.
-	releaseName := cr.GetName()
+	extectedReleaseName string) (string, error) {
+
+	releaseName := extectedReleaseName
 	history, exists, err := releaseHistory(storageBackend, releaseName)
 	if err != nil {
 		return "", err
@@ -203,4 +217,97 @@ func mergeMaps(a, b map[string]interface{}) map[string]interface{} {
 		out[k] = v
 	}
 	return out
+}
+
+func (f managerFactory) addRepository() error {
+	repoFile := f.settings.RepositoryConfig
+
+	//Ensure the file directory exists as it is required for file locking
+	err := os.MkdirAll(filepath.Dir(repoFile), os.ModePerm)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+
+	// Acquire a file lock for process synchronization
+	fileLock := flock.New(strings.Replace(repoFile, filepath.Ext(repoFile), ".lock", 1))
+	lockCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	locked, err := fileLock.TryLockContext(lockCtx, time.Second)
+	if err == nil && locked {
+		defer fileLock.Unlock()
+	}
+	if err != nil {
+		return err
+	}
+
+	b, err := ioutil.ReadFile(repoFile)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	var file repo.File
+	if err := yaml.Unmarshal(b, &file); err != nil {
+		return err
+	}
+
+	if file.Has(f.repositoryName) {
+		fmt.Printf("repository name (%s) already exists\n", f.repositoryName)
+		return nil
+	}
+
+	c := repo.Entry{
+		Name: f.repositoryName,
+		URL:  f.repositoryURL,
+	}
+
+	r, err := repo.NewChartRepository(&c, helmgetter.All(f.settings))
+	if err != nil {
+		return err
+	}
+
+	if _, err := r.DownloadIndexFile(); err != nil {
+		err := errors.Wrapf(err, "looks like %q is not a valid chart repository or cannot be reached", f.repositoryURL)
+		return err
+	}
+
+	file.Update(&c)
+
+	if err := file.WriteFile(repoFile, 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (f managerFactory) updateRepository() error {
+	repoFile := f.settings.RepositoryConfig
+
+	file, err := repo.LoadFile(repoFile)
+	if os.IsNotExist(errors.Cause(err)) || len(file.Repositories) == 0 {
+		return errors.New("no repositories found. You must add one before updating")
+	}
+	var repos []*repo.ChartRepository
+	for _, cfg := range file.Repositories {
+		r, err := repo.NewChartRepository(cfg, helmgetter.All(f.settings))
+		if err != nil {
+			return err
+		}
+		repos = append(repos, r)
+	}
+
+	fmt.Printf("Hang tight while we grab the latest from your chart repositories...\n")
+	var wg sync.WaitGroup
+	for _, re := range repos {
+		wg.Add(1)
+		go func(re *repo.ChartRepository) {
+			defer wg.Done()
+			if _, err := re.DownloadIndexFile(); err != nil {
+				fmt.Printf("...Unable to get an update from the %q chart repository (%s):\n\t%s\n", re.Config.Name, re.Config.URL, err)
+			} else {
+				fmt.Printf("...Successfully got an update from the %q chart repository\n", re.Config.Name)
+			}
+		}(re)
+	}
+	wg.Wait()
+
+	return nil
 }
