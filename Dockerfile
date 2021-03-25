@@ -1,6 +1,10 @@
 # Build the manager binary
 FROM golang:1.15 as builder
 
+WORKDIR /charts
+ADD https://charts.bitnami.com/bitnami/redis-12.9.0.tgz .
+ADD https://charts.bitnami.com/bitnami/memcached-5.8.0.tgz . 
+
 WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod go.mod
@@ -24,6 +28,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/manager .
+COPY --from=builder /charts /charts
+
 USER 65532:65532
 
 ENTRYPOINT ["/manager"]

@@ -7,6 +7,7 @@
 *.dylib
 bin/
 testbin/
+temp-charts/
 testbin/*
 
 # Test binary, build with `go test -c`
@@ -25,3 +26,4 @@ testbin/*
 *.swo
 *~
 .vscode/
+config/crd/bases/_.yaml

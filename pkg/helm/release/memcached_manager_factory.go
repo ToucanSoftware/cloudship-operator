@@ -23,21 +23,17 @@ import (
 )
 
 const (
-	memcachedRepositoryURL  string = "https://charts.bitnami.com/bitnami"
-	memcachedRepositoryName string = "bitnami"
-	memcachedChartName      string = "memcached"
-	memcachedChartVersion   string = "5.8.0"
+	memcachedChartName    string = "memcached"
+	memcachedChartVersion string = "5.8.0"
 )
 
 // NewMemecachedManagerFactory returns a new Helm manager factory capable of installing and uninstalling Memcached releases.
 func NewMemecachedManagerFactory(mgr crmanager.Manager) ManagerFactory {
 	return &managerFactory{
-		mgr:            mgr,
-		repositoryURL:  memcachedRepositoryURL,
-		repositoryName: memcachedRepositoryName,
-		chartName:      memcachedChartName,
-		chartVersion:   memcachedChartVersion,
-		releaseName:    "cache-memcached",
-		settings:       cli.New(),
+		mgr:          mgr,
+		chartName:    memcachedChartName,
+		chartVersion: memcachedChartVersion,
+		releaseName:  "cache-memcached",
+		settings:     cli.New(),
 	}
 }

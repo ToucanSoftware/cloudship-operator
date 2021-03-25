@@ -17,35 +17,24 @@ limitations under the License.
 package release
 
 import (
-	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
-
-	"gopkg.in/yaml.v2"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
-	helmgetter "helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/kube"
 	helmrelease "helm.sh/helm/v3/pkg/release"
-	"helm.sh/helm/v3/pkg/repo"
 	"helm.sh/helm/v3/pkg/storage"
 	"helm.sh/helm/v3/pkg/storage/driver"
 
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/helm/pkg/strvals"
 
+	ctrl "sigs.k8s.io/controller-runtime"
 	crmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/ToucanSoftware/cloudship-operator/internal/helm/client"
-	"github.com/gofrs/flock"
-	"github.com/pkg/errors"
 )
 
 // ManagerFactory creates Managers that are specific to custom resources. It is
@@ -57,16 +46,16 @@ type ManagerFactory interface {
 }
 
 type managerFactory struct {
-	mgr            crmanager.Manager
-	repositoryURL  string
-	repositoryName string
-	chartName      string
-	chartVersion   string
-	releaseName    string
-	settings       *cli.EnvSettings
+	mgr          crmanager.Manager
+	chartName    string
+	chartVersion string
+	releaseName  string
+	settings     *cli.EnvSettings
 }
 
 func (f managerFactory) NewManager(namespace string, overrideValues map[string]string) (Manager, error) {
+	var log = ctrl.Log.WithName("helm").WithName("manager")
+
 	// Get both v2 and v3 storage backends
 	clientv1, err := v1.NewForConfig(f.mgr.GetConfig())
 	if err != nil {
@@ -99,20 +88,9 @@ func (f managerFactory) NewManager(namespace string, overrideValues map[string]s
 		Log:              func(_ string, _ ...interface{}) {},
 	}
 
-	err = f.addRepository()
-	if err != nil {
-		return nil, err
-	}
-	err = f.updateRepository()
-	if err != nil {
-		return nil, err
-	}
-	installAction := action.NewInstall(actionConfig)
-	installAction.ChartPathOptions.Version = f.chartVersion
-	cp, err := installAction.ChartPathOptions.LocateChart(fmt.Sprintf("%s/%s", f.repositoryName, f.chartName), f.settings)
-	if err != nil {
-		return nil, err
-	}
+	var cp = f.buildChartPath()
+
+	log.Info(fmt.Sprintf("Loading Chart: %s", cp))
 	crChart, err := loader.Load(cp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load chart dir: %w", err)
@@ -219,95 +197,12 @@ func mergeMaps(a, b map[string]interface{}) map[string]interface{} {
 	return out
 }
 
-func (f managerFactory) addRepository() error {
-	repoFile := f.settings.RepositoryConfig
-
-	//Ensure the file directory exists as it is required for file locking
-	err := os.MkdirAll(filepath.Dir(repoFile), os.ModePerm)
-	if err != nil && !os.IsExist(err) {
-		return err
+func (f managerFactory) buildChartPath() string {
+	// using a chart path prefix we can use it for debuging
+	var chartPathPrefix = os.Getenv("CHART_PATH_PREFIX")
+	var chartFileName = fmt.Sprintf("%s-%s.tgz", f.chartName, f.chartVersion)
+	if chartPathPrefix == "" {
+		return fmt.Sprintf("/%s", chartFileName)
 	}
-
-	// Acquire a file lock for process synchronization
-	fileLock := flock.New(strings.Replace(repoFile, filepath.Ext(repoFile), ".lock", 1))
-	lockCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	locked, err := fileLock.TryLockContext(lockCtx, time.Second)
-	if err == nil && locked {
-		defer fileLock.Unlock()
-	}
-	if err != nil {
-		return err
-	}
-
-	b, err := ioutil.ReadFile(repoFile)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	var file repo.File
-	if err := yaml.Unmarshal(b, &file); err != nil {
-		return err
-	}
-
-	if file.Has(f.repositoryName) {
-		fmt.Printf("repository name (%s) already exists\n", f.repositoryName)
-		return nil
-	}
-
-	c := repo.Entry{
-		Name: f.repositoryName,
-		URL:  f.repositoryURL,
-	}
-
-	r, err := repo.NewChartRepository(&c, helmgetter.All(f.settings))
-	if err != nil {
-		return err
-	}
-
-	if _, err := r.DownloadIndexFile(); err != nil {
-		err := errors.Wrapf(err, "looks like %q is not a valid chart repository or cannot be reached", f.repositoryURL)
-		return err
-	}
-
-	file.Update(&c)
-
-	if err := file.WriteFile(repoFile, 0644); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (f managerFactory) updateRepository() error {
-	repoFile := f.settings.RepositoryConfig
-
-	file, err := repo.LoadFile(repoFile)
-	if os.IsNotExist(errors.Cause(err)) || len(file.Repositories) == 0 {
-		return errors.New("no repositories found. You must add one before updating")
-	}
-	var repos []*repo.ChartRepository
-	for _, cfg := range file.Repositories {
-		r, err := repo.NewChartRepository(cfg, helmgetter.All(f.settings))
-		if err != nil {
-			return err
-		}
-		repos = append(repos, r)
-	}
-
-	fmt.Printf("Hang tight while we grab the latest from your chart repositories...\n")
-	var wg sync.WaitGroup
-	for _, re := range repos {
-		wg.Add(1)
-		go func(re *repo.ChartRepository) {
-			defer wg.Done()
-			if _, err := re.DownloadIndexFile(); err != nil {
-				fmt.Printf("...Unable to get an update from the %q chart repository (%s):\n\t%s\n", re.Config.Name, re.Config.URL, err)
-			} else {
-				fmt.Printf("...Successfully got an update from the %q chart repository\n", re.Config.Name)
-			}
-		}(re)
-	}
-	wg.Wait()
-
-	return nil
+	return fmt.Sprintf("%s/%s", chartPathPrefix, chartFileName)
 }

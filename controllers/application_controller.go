@@ -81,7 +81,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ReconcileWaitResult, client.IgnoreNotFound(err)
 	}
 
-	err = r.processCache(ctx, log, namespace, &app)
+	err = r.reconcileCache(ctx, log, namespace, &app)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -114,30 +114,39 @@ func (r *ApplicationReconciler) renderNamespace(app *cloudshipv1alpha1.Applicati
 	}
 }
 
-func (r *ApplicationReconciler) processCache(ctx context.Context, log logr.Logger, namespace *corev1.Namespace, app *cloudshipv1alpha1.Application) error {
+func (r *ApplicationReconciler) reconcileCache(ctx context.Context, log logr.Logger, namespace *corev1.Namespace, app *cloudshipv1alpha1.Application) error {
 	if app.Spec.CacheRef == nil {
 		log.Info(fmt.Sprintf("No cache for application %s", app.GetName()))
 		return nil
 	}
-	log.Info(fmt.Sprintf("Processing cache for application %s", app.GetName()))
+	log.Info(fmt.Sprintf("Reconcile cache for application %s", app.GetName()))
 
 	var overrideValues map[string]string
 	var cacheManagerFactory release.ManagerFactory
 
 	switch app.Spec.CacheRef.Type {
 	case cloudshipv1alpha1.CacheTypeMemcached:
+		log.Info(fmt.Sprintf("Reconcile Memcached for application %s", app.GetName()))
 		cacheManagerFactory = r.MemecachedManagerFactory
+		app.Status.Cache = "Memcached"
 	case cloudshipv1alpha1.CacheTypeRedis:
+		log.Info(fmt.Sprintf("Reconcile Redis for application %s", app.GetName()))
 		cacheManagerFactory = r.RedisManagerFactory
+		app.Status.Cache = "Redis"
 	default:
 		return fmt.Errorf("No Manager Factory for %v", app.Spec.CacheRef.Type)
-
 	}
+
+	if err := r.Status().Update(ctx, app); err != nil {
+		return err
+	}
+
 	manager, err := cacheManagerFactory.NewManager(namespace.GetName(), overrideValues)
 	if err != nil {
 		log.Error(err, "Failed to get release manager")
 		return err
 	}
+	log.Info(fmt.Sprintf("Installing Cache Release %s", app.GetName()))
 	rel, err := manager.InstallRelease(ctx)
 	if err != nil {
 		log.Error(err, "Release failed")

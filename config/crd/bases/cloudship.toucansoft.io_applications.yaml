@@ -63,6 +63,9 @@ spec:
           status:
             description: ApplicationStatus defines the observed state of Application
             properties:
+              cache:
+                description: Cache is the status of the cache
+                type: string
               description:
                 description: Deployment is the status of the deployment of the application
                 type: string

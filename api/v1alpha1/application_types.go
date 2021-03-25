@@ -68,6 +68,8 @@ type ApplicationSpec struct {
 
 // ApplicationStatus defines the observed state of Application
 type ApplicationStatus struct {
+	// Cache is the status of the cache
+	Cache string `json:"cache,omitempty"`
 	// Deployment is the status of the deployment of the application
 	Deployment string `json:"description,omitempty"`
 }

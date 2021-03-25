@@ -1,5 +1,5 @@
 # Current Operator version
-VERSION ?= 0.0.1
+VERSION ?= 0.0.2
 # Default bundle image tag
 BUNDLE_IMG ?= docker.pkg.github.com/toucansoftware/cloudship-operator/cloudship-operator-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -13,7 +13,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
 #IMG ?= docker.pkg.github.com/toucansoftware/cloudship-operator/cloudship-operator:latest
-IMG ?= cloudship-operator:0.0.1
+IMG ?= cloudship-operator:0.0.2
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 

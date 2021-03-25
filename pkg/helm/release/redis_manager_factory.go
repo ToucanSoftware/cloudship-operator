@@ -32,12 +32,10 @@ const (
 // NewRedisManagerFactory returns a new Helm manager factory capable of installing and uninstalling Redis releases.
 func NewRedisManagerFactory(mgr crmanager.Manager) ManagerFactory {
 	return &managerFactory{
-		mgr:            mgr,
-		repositoryURL:  redisRepositoryURL,
-		repositoryName: redisRepositoryName,
-		chartName:      redisChartName,
-		chartVersion:   redisChartVersion,
-		releaseName:    "cache-redis",
-		settings:       cli.New(),
+		mgr:          mgr,
+		chartName:    redisChartName,
+		chartVersion: redisChartVersion,
+		releaseName:  "cache-redis",
+		settings:     cli.New(),
 	}
 }
