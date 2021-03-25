@@ -53,8 +53,13 @@ type managerFactory struct {
 	settings     *cli.EnvSettings
 }
 
+const (
+	// This is the directory in the docker image where all the Helm Charts will be located
+	defaultChartPathPrefix string = "/charts"
+)
+
 func (f managerFactory) NewManager(namespace string, overrideValues map[string]string) (Manager, error) {
-	var log = ctrl.Log.WithName("helm").WithName("manager")
+	var log = ctrl.Log.WithName("helm").WithName("manager_factory")
 
 	// Get both v2 and v3 storage backends
 	clientv1, err := v1.NewForConfig(f.mgr.GetConfig())
@@ -202,7 +207,7 @@ func (f managerFactory) buildChartPath() string {
 	var chartPathPrefix = os.Getenv("CHART_PATH_PREFIX")
 	var chartFileName = fmt.Sprintf("%s-%s.tgz", f.chartName, f.chartVersion)
 	if chartPathPrefix == "" {
-		return fmt.Sprintf("/%s", chartFileName)
+		chartPathPrefix = defaultChartPathPrefix
 	}
 	return fmt.Sprintf("%s/%s", chartPathPrefix, chartFileName)
 }

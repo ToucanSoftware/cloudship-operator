@@ -29,6 +29,8 @@ import (
 	"helm.sh/helm/v3/pkg/storage"
 	"helm.sh/helm/v3/pkg/storage/driver"
 
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"github.com/ToucanSoftware/cloudship-operator/pkg/helm/types"
 )
 
@@ -146,15 +148,19 @@ func (m manager) getCandidateRelease(namespace, name string, chart *cpb.Chart,
 
 // InstallRelease performs a Helm release install.
 func (m manager) InstallRelease(ctx context.Context, opts ...InstallOption) (*rpb.Release, error) {
+	var log = ctrl.Log.WithName("helm").WithName("manager")
+
 	install := action.NewInstall(m.actionConfig)
 	install.ReleaseName = m.releaseName
 	install.Namespace = m.namespace
 	for _, o := range opts {
 		if err := o(install); err != nil {
+			log.Error(err, "failed to apply install option")
 			return nil, fmt.Errorf("failed to apply install option: %w", err)
 		}
 	}
 
+	log.Info("Invoking Install Helm Command")
 	installedRelease, err := install.Run(m.chart, m.values)
 	if err != nil {
 		// Workaround for helm/helm#3338
@@ -176,5 +182,6 @@ func (m manager) InstallRelease(ctx context.Context, opts ...InstallOption) (*rp
 		}
 		return nil, fmt.Errorf("failed to install release: %w", err)
 	}
+	log.Info("Release installed")
 	return installedRelease, nil
 }

@@ -58,7 +58,7 @@ type ApplicationReconciler struct {
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var err error
 	log := r.Log.WithValues("application", req.NamespacedName)
-	log.Info("Reconcilate Application")
+	log.Info(fmt.Sprintf("Reconcilate Application: %s", req.Name))
 
 	var app cloudshipv1alpha1.Application
 
@@ -85,13 +85,15 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	log.Info(fmt.Sprintf("Application %s: Cache Reconcilated", req.Name))
 
 	err = r.processEventStream(log, &app)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-
-	return ctrl.Result{}, nil
+	log.Info(fmt.Sprintf("Application %s: Event Stream Reconcilated", req.Name))
+	log.Info(fmt.Sprintf("Application %s: Reconcilated", req.Name))
+	return ReconcileWaitResult, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -146,16 +148,32 @@ func (r *ApplicationReconciler) reconcileCache(ctx context.Context, log logr.Log
 		log.Error(err, "Failed to get release manager")
 		return err
 	}
-	log.Info(fmt.Sprintf("Installing Cache Release %s", app.GetName()))
-	rel, err := manager.InstallRelease(ctx)
-	if err != nil {
-		log.Error(err, "Release failed")
+
+	if err := manager.Sync(ctx); err != nil {
+		log.Error(err, "Failed to sync release")
+		// status.SetCondition(types.HelmAppCondition{
+		// 	Type:    types.ConditionIrreconcilable,
+		// 	Status:  types.StatusTrue,
+		// 	Reason:  types.ReasonReconcileError,
+		// 	Message: err.Error(),
+		// })
+		// if err := r.updateResourceStatus(ctx, o, status); err != nil {
+		// 	log.Error(err, "Failed to update status after sync release failure")
+		// }
 		return err
 	}
+	//	status.RemoveCondition(types.ConditionIrreconcilable)
 
-	//status := types.StatusFor(o)
-	log.Info(fmt.Sprintf("Cache with name %s for application %s installed", rel.Name, app.GetName()))
-
+	if !manager.IsInstalled() {
+		log.Info(fmt.Sprintf("Installing Cache Release %s", app.GetName()))
+		rel, err := manager.InstallRelease(ctx)
+		if err != nil {
+			log.Error(err, "Release failed")
+			return err
+		}
+		//status := types.StatusFor(o)
+		log.Info(fmt.Sprintf("Cache with name %s for application %s installed", rel.Name, app.GetName()))
+	}
 	return nil
 }
 

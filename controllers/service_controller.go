@@ -91,7 +91,7 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ReconcileWaitResult, client.IgnoreNotFound(err)
 	}
 
-	return ctrl.Result{}, nil
+	return ReconcileWaitResult, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
