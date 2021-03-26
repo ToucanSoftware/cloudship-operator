@@ -23,20 +23,26 @@ import (
 )
 
 const (
-	memcachedChartName    string = "memcached"
-	memcachedChartVersion string = "5.8.0"
+	rabbitMQChartName    string = "rabbitmq"
+	rabbitMQChartVersion string = "8.11.4"
 )
 
-var memcachedValues map[string]interface{} = map[string]interface{}{}
+var rabbitMQValues map[string]interface{} = map[string]interface{}{
+	"auth": map[string]interface{}{
+		"username":     "user",
+		"password":     "clouldship",
+		"erlangCookie": "1234567890",
+	},
+}
 
-// NewMemecachedManagerFactory returns a new Helm manager factory capable of installing and uninstalling Memcached releases.
-func NewMemecachedManagerFactory(mgr crmanager.Manager) ManagerFactory {
+// NewRabbitMQManagerFactory returns a new Helm manager factory capable of installing and uninstalling Memcached releases.
+func NewRabbitMQManagerFactory(mgr crmanager.Manager) ManagerFactory {
 	return &managerFactory{
 		mgr:          mgr,
-		chartName:    memcachedChartName,
-		chartVersion: memcachedChartVersion,
-		values:       memcachedValues,
-		releaseName:  "cache-memcached",
+		chartName:    rabbitMQChartName,
+		chartVersion: rabbitMQChartVersion,
+		values:       rabbitMQValues,
+		releaseName:  "stream-rabbitmq",
 		settings:     cli.New(),
 	}
 }

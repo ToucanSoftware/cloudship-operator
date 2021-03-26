@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -25,13 +26,21 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"helm.sh/helm/v3/pkg/storage/driver"
 
 	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
 	"github.com/ToucanSoftware/cloudship-operator/pkg/helm/release"
+)
+
+const (
+	// uninstallFinalizer is added to CRs so they are cleaned up after uninstalling a release.
+	uninstallFinalizer = "cloudship.toucansfot.io/uninstall-application"
 )
 
 // ApplicationReconciler reconciles a Application object
@@ -41,9 +50,9 @@ type ApplicationReconciler struct {
 	Scheme                   *runtime.Scheme
 	MemecachedManagerFactory release.ManagerFactory
 	RedisManagerFactory      release.ManagerFactory
-
-	EventRecorder record.EventRecorder
-	GVK           schema.GroupVersionKind
+	RabbitMQManagerFactory   release.ManagerFactory
+	KafkaManagerFactory      release.ManagerFactory
+	EventRecorder            record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=cloudship.toucansoft.io,resources=applications,verbs=get;list;watch;create;update;patch;delete
@@ -69,6 +78,8 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	//status := types.StatusFor(&app)
+
 	// Reder Namespace base on the application name
 	namespace := r.renderNamespace(&app)
 	// Set application as the owner and controller
@@ -87,12 +98,14 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 	log.Info(fmt.Sprintf("Application %s: Cache Reconcilated", req.Name))
 
-	err = r.processEventStream(log, &app)
+	err = r.processEventStream(ctx, log, namespace, &app)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Info(fmt.Sprintf("Application %s: Event Stream Reconcilated", req.Name))
 	log.Info(fmt.Sprintf("Application %s: Reconcilated", req.Name))
+
+	//err = r.updateResourceStatus(ctx, &app, status)
 	return ReconcileWaitResult, nil
 }
 
@@ -149,6 +162,64 @@ func (r *ApplicationReconciler) reconcileCache(ctx context.Context, log logr.Log
 		return err
 	}
 
+	return r.reconcileFromManager(ctx, log, manager, app)
+}
+
+func (r *ApplicationReconciler) processEventStream(ctx context.Context, log logr.Logger, namespace *corev1.Namespace, app *cloudshipv1alpha1.Application) error {
+	if app.Spec.EventStreamRefs == nil {
+		log.Info(fmt.Sprintf("No event stream for application %s", app.GetName()))
+		return nil
+	}
+	log.Info(fmt.Sprintf("Processing event stream for application %s", app.GetName()))
+
+	var overrideValues map[string]string
+	var eventStreamManagerFactory release.ManagerFactory
+
+	switch app.Spec.EventStreamRefs.Type {
+	case cloudshipv1alpha1.EventStreamTypeRabbitMQ:
+		log.Info(fmt.Sprintf("Reconcile RabbitMQ for application %s", app.GetName()))
+		eventStreamManagerFactory = r.RabbitMQManagerFactory
+		//app.Status.EventStream = "Ra"
+	case cloudshipv1alpha1.EventStreamTypeKafka:
+		log.Info(fmt.Sprintf("Reconcile Kafka for application %s", app.GetName()))
+		eventStreamManagerFactory = r.KafkaManagerFactory
+	// 	app.Status.Cache = "Redis"
+	default:
+		return fmt.Errorf("No Manager Factory for %v", app.Spec.EventStreamRefs.Type)
+	}
+	manager, err := eventStreamManagerFactory.NewManager(namespace.GetName(), overrideValues)
+	if err != nil {
+		log.Error(err, "Failed to get release manager")
+		return err
+	}
+	return r.reconcileFromManager(ctx, log, manager, app)
+}
+
+func (r *ApplicationReconciler) reconcileFromManager(ctx context.Context, log logr.Logger, manager release.Manager, app *cloudshipv1alpha1.Application) error {
+	// Check if the application has been delete
+	if app.GetDeletionTimestamp() != nil {
+		// Check for finalizer
+		if !controllerutil.ContainsFinalizer(app, uninstallFinalizer) {
+			log.Info("Resource is terminated, skipping reconciliation")
+			return nil
+		}
+
+		_, err := manager.UninstallRelease(ctx)
+		if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
+			log.Error(err, "Failed to uninstall release")
+			// status.SetCondition(types.HelmAppCondition{
+			// 	Type:    types.ConditionReleaseFailed,
+			// 	Status:  types.StatusTrue,
+			// 	Reason:  types.ReasonUninstallError,
+			// 	Message: err.Error(),
+			// })
+			// if err := r.updateResourceStatus(ctx, o, status); err != nil {
+			// 	log.Error(err, "Failed to update status after uninstall release failure")
+			// }
+			return err
+		}
+	}
+
 	if err := manager.Sync(ctx); err != nil {
 		log.Error(err, "Failed to sync release")
 		// status.SetCondition(types.HelmAppCondition{
@@ -177,11 +248,9 @@ func (r *ApplicationReconciler) reconcileCache(ctx context.Context, log logr.Log
 	return nil
 }
 
-func (r *ApplicationReconciler) processEventStream(log logr.Logger, app *cloudshipv1alpha1.Application) error {
-	if app.Spec.EventStreamRefs == nil {
-		log.Info(fmt.Sprintf("No event stream for application %s", app.GetName()))
-		return nil
-	}
-	log.Info(fmt.Sprintf("Processing event stream for application %s", app.GetName()))
-	return nil
+func (r *ApplicationReconciler) updateResourceStatus(ctx context.Context, app *cloudshipv1alpha1.Application, status *cloudshipv1alpha1.ApplicationStatus) error {
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		app.Status = *status
+		return r.Client.Status().Update(ctx, app)
+	})
 }

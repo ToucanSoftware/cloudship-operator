@@ -81,26 +81,31 @@ func main() {
 
 	if err = (&controllers.ApplicationReconciler{
 		Client:                   mgr.GetClient(),
+		EventRecorder:            mgr.GetEventRecorderFor("Application"),
 		Log:                      ctrl.Log.WithName("controllers").WithName("Application"),
 		Scheme:                   mgr.GetScheme(),
 		MemecachedManagerFactory: release.NewMemecachedManagerFactory(mgr),
 		RedisManagerFactory:      release.NewRedisManagerFactory(mgr),
+		RabbitMQManagerFactory:   release.NewRabbitMQManagerFactory(mgr),
+		KafkaManagerFactory:      release.NewKafkaManagerFactory(mgr),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)
 	}
 	if err = (&controllers.AppServiceReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("AppService"),
-		Scheme: mgr.GetScheme(),
+		Client:        mgr.GetClient(),
+		EventRecorder: mgr.GetEventRecorderFor("AppService"),
+		Log:           ctrl.Log.WithName("controllers").WithName("AppService"),
+		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AppService")
 		os.Exit(1)
 	}
 	if err = (&controllers.AppResourceReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("AppResource"),
-		Scheme: mgr.GetScheme(),
+		Client:        mgr.GetClient(),
+		EventRecorder: mgr.GetEventRecorderFor("AppResource"),
+		Log:           ctrl.Log.WithName("controllers").WithName("AppResource"),
+		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AppResource")
 		os.Exit(1)

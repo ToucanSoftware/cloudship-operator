@@ -23,20 +23,20 @@ import (
 )
 
 const (
-	memcachedChartName    string = "memcached"
-	memcachedChartVersion string = "5.8.0"
+	kafkaChartName    string = "kafka"
+	kafkaChartVersion string = "12.13.2"
 )
 
-var memcachedValues map[string]interface{} = map[string]interface{}{}
+var kafkaValues map[string]interface{} = map[string]interface{}{}
 
-// NewMemecachedManagerFactory returns a new Helm manager factory capable of installing and uninstalling Memcached releases.
-func NewMemecachedManagerFactory(mgr crmanager.Manager) ManagerFactory {
+// NewKafkaManagerFactory returns a new Helm manager factory capable of installing and uninstalling Memcached releases.
+func NewKafkaManagerFactory(mgr crmanager.Manager) ManagerFactory {
 	return &managerFactory{
 		mgr:          mgr,
-		chartName:    memcachedChartName,
-		chartVersion: memcachedChartVersion,
-		values:       memcachedValues,
-		releaseName:  "cache-memcached",
+		chartName:    kafkaChartName,
+		chartVersion: kafkaChartVersion,
+		values:       kafkaValues,
+		releaseName:  "stream-kafka",
 		settings:     cli.New(),
 	}
 }

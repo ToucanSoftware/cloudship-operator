@@ -35,6 +35,7 @@ import (
 )
 
 type InstallOption func(*action.Install) error
+type UninstallOption func(*action.Uninstall) error
 
 // Manager manages a Helm release. It can install, upgrade, reconcile,
 // and uninstall a release.
@@ -46,7 +47,7 @@ type Manager interface {
 	InstallRelease(context.Context, ...InstallOption) (*rpb.Release, error)
 	// UpgradeRelease(context.Context, ...UpgradeOption) (*rpb.Release, *rpb.Release, error)
 	// ReconcileRelease(context.Context) (*rpb.Release, error)
-	// UninstallRelease(context.Context, ...UninstallOption) (*rpb.Release, error)
+	UninstallRelease(context.Context, ...UninstallOption) (*rpb.Release, error)
 }
 
 type manager struct {
@@ -184,4 +185,19 @@ func (m manager) InstallRelease(ctx context.Context, opts ...InstallOption) (*rp
 	}
 	log.Info("Release installed")
 	return installedRelease, nil
+}
+
+// UninstallRelease performs a Helm release uninstall.
+func (m manager) UninstallRelease(ctx context.Context, opts ...UninstallOption) (*rpb.Release, error) {
+	uninstall := action.NewUninstall(m.actionConfig)
+	for _, o := range opts {
+		if err := o(uninstall); err != nil {
+			return nil, fmt.Errorf("failed to apply uninstall option: %w", err)
+		}
+	}
+	uninstallResponse, err := uninstall.Run(m.releaseName)
+	if uninstallResponse == nil {
+		return nil, err
+	}
+	return uninstallResponse.Release, err
 }

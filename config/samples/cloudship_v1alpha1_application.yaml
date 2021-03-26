@@ -6,3 +6,5 @@ spec:
   description: Sample Application
   cacheRef:
     type: Memcached
+  eventStreamRef:
+    type: RabbitMQ

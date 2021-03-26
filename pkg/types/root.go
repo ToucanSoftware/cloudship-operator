@@ -19,10 +19,17 @@ package types
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
 )
 
 // An Object is a Kubernetes object.
 type Object interface {
 	metav1.Object
 	runtime.Object
+}
+
+// StatusFor safely returns a typed status block from an application.
+func StatusFor(app *cloudshipv1alpha1.Application) *cloudshipv1alpha1.ApplicationStatus {
+	return &cloudshipv1alpha1.ApplicationStatus{}
 }

@@ -29,12 +29,15 @@ const (
 	redisChartVersion   string = "12.8.3"
 )
 
+var redisValues map[string]interface{} = map[string]interface{}{}
+
 // NewRedisManagerFactory returns a new Helm manager factory capable of installing and uninstalling Redis releases.
 func NewRedisManagerFactory(mgr crmanager.Manager) ManagerFactory {
 	return &managerFactory{
 		mgr:          mgr,
 		chartName:    redisChartName,
 		chartVersion: redisChartVersion,
+		values:       redisValues,
 		releaseName:  "cache-redis",
 		settings:     cli.New(),
 	}

@@ -50,6 +50,7 @@ type managerFactory struct {
 	chartName    string
 	chartVersion string
 	releaseName  string
+	values       map[string]interface{}
 	settings     *cli.EnvSettings
 }
 
@@ -81,11 +82,14 @@ func (f managerFactory) NewManager(namespace string, overrideValues map[string]s
 	if err != nil {
 		return nil, fmt.Errorf("failed to inject owner references: %w", err)
 	}
-	values, err := parseOverrides(overrideValues)
+	expOverrides, err := parseOverrides(overrideValues)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse override values: %w", err)
 	}
-
+	values := mergeMaps(f.values, expOverrides)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse override values: %w", err)
+	}
 	actionConfig := &action.Configuration{
 		RESTClientGetter: rcg,
 		Releases:         storageBackend,

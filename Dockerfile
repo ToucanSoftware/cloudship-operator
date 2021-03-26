@@ -3,7 +3,9 @@ FROM golang:1.15 as builder
 
 WORKDIR /charts
 ADD https://charts.bitnami.com/bitnami/redis-12.9.0.tgz .
-ADD https://charts.bitnami.com/bitnami/memcached-5.8.0.tgz . 
+ADD https://charts.bitnami.com/bitnami/memcached-5.8.0.tgz .
+ADD https://charts.bitnami.com/bitnami/rabbitmq-8.11.4.tgz .
+ADD https://charts.bitnami.com/bitnami/kafka-12.13.2.tgz .
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
