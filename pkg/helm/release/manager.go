@@ -32,7 +32,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+// InstallOption are the options for the install command
 type InstallOption func(*action.Install) error
+
+// UninstallOption are the options for the uninstall command
 type UninstallOption func(*action.Uninstall) error
 
 // Manager manages a Helm release. It can install, upgrade, reconcile,
