@@ -1,7 +1,7 @@
 # Cloudship Operator
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FToucanSoftware%2Fcloudship-operator.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FToucanSoftware%2Fcloudship-operator?ref=badge_shield)
-[![license][license]](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Docker](https://github.com/ToucanSoftware/cloudship-operator/actions/workflows/docker-publish.yml/badge.svg?branch=main)](https://github.com/ToucanSoftware/cloudship-operator/actions/workflows/docker-publish.yml)
 
 ```console
