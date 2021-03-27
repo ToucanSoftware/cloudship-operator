@@ -9,3 +9,5 @@ spec:
       ports:
         - name: http
           portNumber: 80
+  databaseRef:
+    type: PostgreSQL

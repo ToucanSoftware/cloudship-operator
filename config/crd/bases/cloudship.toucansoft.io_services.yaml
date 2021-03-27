@@ -78,6 +78,16 @@ spec:
                   - ports
                   type: object
                 type: array
+              databaseRef:
+                description: DatabaseRef is the reference to database for the service
+                properties:
+                  type:
+                    description: Type is the type of the database
+                    enum:
+                    - MySQL
+                    - PostgreSQL
+                    type: string
+                type: object
             required:
             - containers
             type: object

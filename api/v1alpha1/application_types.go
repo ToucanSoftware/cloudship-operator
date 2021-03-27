@@ -21,6 +21,7 @@ import (
 )
 
 // EventStreamType are the types of event stream supported
+// +kubebuilder:validation:Enum=Kafka;RabbitMQ
 type EventStreamType string
 
 const (
@@ -37,6 +38,7 @@ type EventStreamSpec struct {
 }
 
 // CacheType are the types of cache supported
+// +kubebuilder:validation:Enum=Redis;Memcached
 type CacheType string
 
 const (

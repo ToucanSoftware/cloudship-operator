@@ -46,6 +46,9 @@ spec:
                 properties:
                   type:
                     description: Type is the type of the cache
+                    enum:
+                    - Redis
+                    - Memcached
                     type: string
                 type: object
               description:
@@ -57,6 +60,9 @@ spec:
                 properties:
                   type:
                     description: Type is the type of the cache
+                    enum:
+                    - Kafka
+                    - RabbitMQ
                     type: string
                 type: object
             type: object

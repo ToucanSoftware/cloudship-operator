@@ -20,6 +20,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// DatabaseType are the types of database supported
+// +kubebuilder:validation:Enum=MySQL;PostgreSQL
+type DatabaseType string
+
+const (
+	// DatabaseTypeMySQL use MySQL for Database
+	DatabaseTypeMySQL DatabaseType = "MySQL"
+	// DatabaseTypePostgreSQL use PostgreSQL for Database
+	DatabaseTypePostgreSQL DatabaseType = "PostgreSQL"
+)
+
+// DatabaseSpec is the definition for Database support for the service
+type DatabaseSpec struct {
+	// Type is the type of the database
+	Type DatabaseType `json:"type,omitempty"`
+}
+
 // Service defines an Application Service
 type Service struct {
 	// Name of this service. Must be unique within its service.
@@ -46,6 +63,10 @@ type Container struct {
 type AppServiceSpec struct {
 	// Containers of which this service consists.
 	Containers []Container `json:"containers"`
+
+	// DatabaseRef is the reference to database for the service
+	// +optional
+	DatabaseRef *DatabaseSpec `json:"databaseRef,omitempty"`
 }
 
 // AppServiceStatus defines the observed state of AppService

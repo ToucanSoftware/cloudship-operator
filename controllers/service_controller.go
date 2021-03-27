@@ -33,15 +33,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
+	"github.com/ToucanSoftware/cloudship-operator/pkg/helm/release"
 	"github.com/ToucanSoftware/cloudship-operator/pkg/types"
 )
 
 // AppServiceReconciler reconciles a AppService object
 type AppServiceReconciler struct {
 	client.Client
-	Log           logr.Logger
-	Scheme        *runtime.Scheme
-	EventRecorder record.EventRecorder
+	Log                      logr.Logger
+	Scheme                   *runtime.Scheme
+	EventRecorder            record.EventRecorder
+	MySQLManagerFactory      release.ManagerFactory
+	PostgreSQLManagerFactory release.ManagerFactory
 }
 
 var (
@@ -91,6 +94,54 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		log.Error(err, "Failed to apply a service")
 		//r.record.Event(eventObj, event.Warning(errApplyDeployment, err))
 		return ReconcileWaitResult, client.IgnoreNotFound(err)
+	}
+
+	var overrideValues map[string]string
+	var dbManagerFactory release.ManagerFactory
+
+	switch appService.Spec.DatabaseRef.Type {
+	case cloudshipv1alpha1.DatabaseTypeMySQL:
+		log.Info(fmt.Sprintf("Reconcile MySQL for service %s", appService.GetName()))
+		dbManagerFactory = r.MySQLManagerFactory
+		//app.Status.Cache = "Memcached"
+	case cloudshipv1alpha1.DatabaseTypePostgreSQL:
+		log.Info(fmt.Sprintf("Reconcile PosgreSQL for application %s", appService.GetName()))
+		dbManagerFactory = r.PostgreSQLManagerFactory
+		//app.Status.Cache = "Redis"
+	default:
+		return ReconcileWaitResult, fmt.Errorf("No Manager Factory for %v", appService.Spec.DatabaseRef.Type)
+	}
+
+	manager, err := dbManagerFactory.NewManager(req.Namespace, overrideValues)
+	if err != nil {
+		log.Error(err, "Failed to get release manager")
+		return ReconcileWaitResult, err
+	}
+
+	if err := manager.Sync(ctx); err != nil {
+		log.Error(err, "Failed to sync release")
+		// status.SetCondition(types.HelmAppCondition{
+		// 	Type:    types.ConditionIrreconcilable,
+		// 	Status:  types.StatusTrue,
+		// 	Reason:  types.ReasonReconcileError,
+		// 	Message: err.Error(),
+		// })
+		// if err := r.updateResourceStatus(ctx, o, status); err != nil {
+		// 	log.Error(err, "Failed to update status after sync release failure")
+		// }
+		return ReconcileWaitResult, err
+	}
+	//	status.RemoveCondition(types.ConditionIrreconcilable)
+
+	if !manager.IsInstalled() {
+		log.Info(fmt.Sprintf("Installing Database Release %s", appService.GetName()))
+		rel, err := manager.InstallRelease(ctx)
+		if err != nil {
+			log.Error(err, "Release failed")
+			return ReconcileWaitResult, err
+		}
+		//status := types.StatusFor(o)
+		log.Info(fmt.Sprintf("Database with name %s for service %s installed", rel.Name, appService.GetName()))
 	}
 
 	return reconcile.Result{}, nil

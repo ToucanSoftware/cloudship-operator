@@ -93,10 +93,12 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.AppServiceReconciler{
-		Client:        mgr.GetClient(),
-		EventRecorder: mgr.GetEventRecorderFor("AppService"),
-		Log:           ctrl.Log.WithName("controllers").WithName("AppService"),
-		Scheme:        mgr.GetScheme(),
+		Client:                   mgr.GetClient(),
+		EventRecorder:            mgr.GetEventRecorderFor("AppService"),
+		Log:                      ctrl.Log.WithName("controllers").WithName("AppService"),
+		Scheme:                   mgr.GetScheme(),
+		MySQLManagerFactory:      release.NewMySQLManagerFactory(mgr),
+		PostgreSQLManagerFactory: release.NewPostgreSQLManagerFactory(mgr),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AppService")
 		os.Exit(1)
