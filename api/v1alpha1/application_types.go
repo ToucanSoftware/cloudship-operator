@@ -59,11 +59,11 @@ type ApplicationSpec struct {
 	// Description is the name of the application
 	Description string `json:"description,omitempty"`
 
-	// CacheRef is the reference to cache informacion for the applicacion
+	// CacheRef is the reference to cache information for the applicacion
 	// +optional
 	CacheRef *CacheSpec `json:"cacheRef,omitempty"`
 
-	// EventStreamRefs is the reference to event stream informacion for the applicacion
+	// EventStreamRefs is the reference to event stream information for the applicacion
 	// +optional
 	EventStreamRefs *EventStreamSpec `json:"eventStreamRef,omitempty"`
 }

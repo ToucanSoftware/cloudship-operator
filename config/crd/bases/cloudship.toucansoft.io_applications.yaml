@@ -1,4 +1,3 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -11,76 +10,80 @@ spec:
   group: cloudship.toucansoft.io
   names:
     categories:
-    - cloudship
+      - cloudship
     kind: Application
     listKind: ApplicationList
     plural: applications
     shortNames:
-    - csa
+      - csa
     singular: application
   scope: Cluster
   versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: Application is the Schema for the applications API
-        properties:
-          apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-            type: string
-          kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: ApplicationSpec defines the desired state of Application
-            properties:
-              cacheRef:
-                description: CacheRef is the reference to cache informacion for the
-                  applicacion
-                properties:
-                  type:
-                    description: Type is the type of the cache
-                    enum:
-                    - Redis
-                    - Memcached
-                    type: string
-                type: object
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Application is the Schema for the applications API
+          properties:
+            apiVersion:
               description:
-                description: Description is the name of the application
-                type: string
-              eventStreamRef:
-                description: EventStreamRefs is the reference to event stream informacion
-                  for the applicacion
-                properties:
-                  type:
-                    description: Type is the type of the cache
-                    enum:
-                    - Kafka
-                    - RabbitMQ
-                    type: string
-                type: object
-            type: object
-          status:
-            description: ApplicationStatus defines the observed state of Application
-            properties:
-              cache:
-                description: Cache is the status of the cache
-                type: string
+                "APIVersion defines the versioned schema of this representation
+                of an object. Servers should convert recognized schemas to the latest
+                internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources"
+              type: string
+            kind:
               description:
-                description: Deployment is the status of the deployment of the application
-                type: string
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
+                "Kind is a string value representing the REST resource this
+                object represents. Servers may infer this from the endpoint the client
+                submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ApplicationSpec defines the desired state of Application
+              properties:
+                cacheRef:
+                  description:
+                    CacheRef is the reference to cache information for the
+                    applicacion
+                  properties:
+                    type:
+                      description: Type is the type of the cache
+                      enum:
+                        - Redis
+                        - Memcached
+                      type: string
+                  type: object
+                description:
+                  description: Description is the name of the application
+                  type: string
+                eventStreamRef:
+                  description:
+                    EventStreamRefs is the reference to event stream information
+                    for the applicacion
+                  properties:
+                    type:
+                      description: Type is the type of the cache
+                      enum:
+                        - Kafka
+                        - RabbitMQ
+                      type: string
+                  type: object
+              type: object
+            status:
+              description: ApplicationStatus defines the observed state of Application
+              properties:
+                cache:
+                  description: Cache is the status of the cache
+                  type: string
+                description:
+                  description: Deployment is the status of the deployment of the application
+                  type: string
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
 status:
   acceptedNames:
     kind: ""
