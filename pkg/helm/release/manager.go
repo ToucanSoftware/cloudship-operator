@@ -30,8 +30,6 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-
-	"github.com/ToucanSoftware/cloudship-operator/pkg/helm/types"
 )
 
 type InstallOption func(*action.Install) error
@@ -59,7 +57,6 @@ type manager struct {
 	namespace   string
 
 	values map[string]interface{}
-	status *types.HelmAppStatus
 
 	isInstalled       bool
 	isUpgradeRequired bool
