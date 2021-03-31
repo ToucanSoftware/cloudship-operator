@@ -17,6 +17,7 @@ limitations under the License.
 package release
 
 import (
+	"fmt"
 	"helm.sh/helm/v3/pkg/cli"
 
 	crmanager "sigs.k8s.io/controller-runtime/pkg/manager"
@@ -29,14 +30,22 @@ const (
 
 var memcachedValues map[string]interface{} = map[string]interface{}{}
 
+type EstrategiaMemcached struct{}
+
+func (e EstrategiaMemcached) PreInstalacion() map[string]interface{} {
+	fmt.Print("Soy la estrategia de memcached")
+	return memcachedValues
+}
+
 // NewMemecachedManagerFactory returns a new Helm manager factory capable of installing and uninstalling Memcached releases.
 func NewMemecachedManagerFactory(mgr crmanager.Manager) ManagerFactory {
 	return &managerFactory{
 		mgr:          mgr,
 		chartName:    memcachedChartName,
 		chartVersion: memcachedChartVersion,
-		values:       memcachedValues,
-		releaseName:  "cache-memcached",
-		settings:     cli.New(),
+		//values:       memcachedValues,
+		releaseName: "cache-memcached",
+		settings:    cli.New(),
+		estrategia:  EstrategiaMemcached{},
 	}
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package release
 
 import (
+	"fmt"
 	"helm.sh/helm/v3/pkg/cli"
 
 	crmanager "sigs.k8s.io/controller-runtime/pkg/manager"
@@ -29,14 +30,22 @@ const (
 
 var mysqlValues map[string]interface{} = map[string]interface{}{}
 
+type EstrategiaMySql struct{}
+
+func (e EstrategiaMySql) PreInstalacion() map[string]interface{} {
+	fmt.Print("Soy la estrategia de mySql")
+	return mysqlValues
+}
+
 // NewMySQLManagerFactory returns a new Helm manager factory capable of installing and uninstalling MySQL releases.
 func NewMySQLManagerFactory(mgr crmanager.Manager) ManagerFactory {
 	return &managerFactory{
 		mgr:          mgr,
 		chartName:    mysqlChartName,
 		chartVersion: mysqlChartVersion,
-		values:       mysqlValues,
-		releaseName:  "db-mysql",
-		settings:     cli.New(),
+		//values:       mysqlValues,
+		releaseName: "db-mysql",
+		settings:    cli.New(),
+		estrategia:  EstrategiaMySql{},
 	}
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package release
 
 import (
+	"fmt"
 	"helm.sh/helm/v3/pkg/cli"
 
 	crmanager "sigs.k8s.io/controller-runtime/pkg/manager"
@@ -29,14 +30,22 @@ const (
 
 var kafkaValues map[string]interface{} = map[string]interface{}{}
 
+type EstrategiaKafka struct{}
+
+func (e EstrategiaKafka) PreInstalacion() map[string]interface{} {
+	fmt.Print("Soy la estrategia de kafka")
+	return kafkaValues
+}
+
 // NewKafkaManagerFactory returns a new Helm manager factory capable of installing and uninstalling Memcached releases.
 func NewKafkaManagerFactory(mgr crmanager.Manager) ManagerFactory {
 	return &managerFactory{
 		mgr:          mgr,
 		chartName:    kafkaChartName,
 		chartVersion: kafkaChartVersion,
-		values:       kafkaValues,
-		releaseName:  "stream-kafka",
-		settings:     cli.New(),
+		//values:       kafkaValues,
+		releaseName: "stream-kafka",
+		settings:    cli.New(),
+		estrategia:  EstrategiaKafka{},
 	}
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package release
 
 import (
+	"fmt"
 	"helm.sh/helm/v3/pkg/cli"
 
 	crmanager "sigs.k8s.io/controller-runtime/pkg/manager"
@@ -31,14 +32,22 @@ const (
 
 var redisValues map[string]interface{} = map[string]interface{}{}
 
+type EstrategiaRedis struct{}
+
+func (e EstrategiaRedis) PreInstalacion() map[string]interface{} {
+	fmt.Print("Soy la estrategia de redis")
+	return redisValues
+}
+
 // NewRedisManagerFactory returns a new Helm manager factory capable of installing and uninstalling Redis releases.
 func NewRedisManagerFactory(mgr crmanager.Manager) ManagerFactory {
 	return &managerFactory{
 		mgr:          mgr,
 		chartName:    redisChartName,
 		chartVersion: redisChartVersion,
-		values:       redisValues,
-		releaseName:  "cache-redis",
-		settings:     cli.New(),
+		//values:       redisValues,
+		releaseName: "cache-redis",
+		settings:    cli.New(),
+		estrategia:  EstrategiaRedis{},
 	}
 }

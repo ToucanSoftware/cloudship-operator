@@ -17,6 +17,7 @@ limitations under the License.
 package release
 
 import (
+	"fmt"
 	"helm.sh/helm/v3/pkg/cli"
 
 	crmanager "sigs.k8s.io/controller-runtime/pkg/manager"
@@ -29,14 +30,22 @@ const (
 
 var postgresqlValues map[string]interface{} = map[string]interface{}{}
 
+type EstrategiaPostgresql struct{}
+
+func (e EstrategiaPostgresql) PreInstalacion() map[string]interface{} {
+	fmt.Print("Soy la estrategia de postgres")
+	return postgresqlValues
+}
+
 // NewPostgreSQLManagerFactory returns a new Helm manager factory capable of installing and uninstalling PostgreSQL releases.
 func NewPostgreSQLManagerFactory(mgr crmanager.Manager) ManagerFactory {
 	return &managerFactory{
 		mgr:          mgr,
 		chartName:    postgresqlChartName,
 		chartVersion: postgresqlChartVersion,
-		values:       postgresqlValues,
-		releaseName:  "db",
-		settings:     cli.New(),
+		//values:       postgresqlValues,
+		releaseName: "db",
+		settings:    cli.New(),
+		estrategia:  EstrategiaPostgresql{},
 	}
 }

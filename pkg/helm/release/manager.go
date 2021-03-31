@@ -49,6 +49,11 @@ type Manager interface {
 	// UpgradeRelease(context.Context, ...UpgradeOption) (*rpb.Release, *rpb.Release, error)
 	// ReconcileRelease(context.Context) (*rpb.Release, error)
 	UninstallRelease(context.Context, ...UninstallOption) (*rpb.Release, error)
+	PreInstalacion() map[string]interface{}
+}
+
+type Estrategia interface {
+	PreInstalacion() map[string]interface{}
 }
 
 type manager struct {
@@ -65,6 +70,13 @@ type manager struct {
 	isUpgradeRequired bool
 	deployedRelease   *rpb.Release
 	chart             *cpb.Chart
+
+	estrategia Estrategia
+}
+
+// ReleaseName returns the name of the release.
+func (m manager) PreInstalacion() map[string]interface{} {
+	return m.estrategia.PreInstalacion()
 }
 
 // ReleaseName returns the name of the release.
