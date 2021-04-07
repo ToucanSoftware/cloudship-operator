@@ -50,8 +50,9 @@ type managerFactory struct {
 	chartName    string
 	chartVersion string
 	releaseName  string
-	values       map[string]interface{}
-	settings     *cli.EnvSettings
+	//values       overrideValues
+	settings   *cli.EnvSettings
+	estrategia Estrategia
 }
 
 const (
@@ -86,7 +87,7 @@ func (f managerFactory) NewManager(namespace string, overrideValues map[string]s
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse override values: %w", err)
 	}
-	values := mergeMaps(f.values, expOverrides)
+	values := mergeMaps(f.estrategia.PreInstalacion(), expOverrides)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse override values: %w", err)
 	}
@@ -116,8 +117,9 @@ func (f managerFactory) NewManager(namespace string, overrideValues map[string]s
 		releaseName: releaseName,
 		namespace:   namespace,
 
-		chart:  crChart,
-		values: values,
+		chart:      crChart,
+		values:     values,
+		estrategia: f.estrategia,
 		//status: types.StatusFor(cr),
 	}, nil
 }

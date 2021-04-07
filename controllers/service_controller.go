@@ -108,6 +108,10 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	if !manager.IsInstalled() {
 		log.Info(fmt.Sprintf("Installing Database Release %s", appService.GetName()))
+
+		//TODO: acá se puede hacer lo que haya que hacer previo a la instalación.
+		manager.PreInstalacion()
+
 		rel, err := manager.InstallRelease(ctx)
 		if err != nil {
 			log.Error(err, "Release failed")
