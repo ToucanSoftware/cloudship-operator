@@ -315,8 +315,16 @@ func renderDatabaseEnvVars(as *cloudshipv1alpha1.AppService) []corev1.EnvVar {
 	}
 	return []corev1.EnvVar{
 		{
-			Name:  "DATABASE_URL",
-			Value: as.Status.DatabaseStatusRef.ConnectionURL,
+			Name:  "DATABASE_NAME",
+			Value: as.Status.DatabaseStatusRef.Name,
+		},
+		{
+			Name:  "DATABASE_HOSTNAME",
+			Value: as.Status.DatabaseStatusRef.Hostname,
+		},
+		{
+			Name:  "DATABASE_PORT",
+			Value: as.Status.DatabaseStatusRef.Port,
 		},
 		{
 			Name:  "DATABASE_USERNAME",

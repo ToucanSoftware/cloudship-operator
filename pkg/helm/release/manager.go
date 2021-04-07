@@ -30,6 +30,9 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // InstallOption are the options for the install command
@@ -50,10 +53,12 @@ type Manager interface {
 	// ReconcileRelease(context.Context) (*rpb.Release, error)
 	UninstallRelease(context.Context, ...UninstallOption) (*rpb.Release, error)
 	PreInstalacion() map[string]interface{}
+	EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar
 }
 
-type Estrategia interface {
+type ManagerAction interface {
 	PreInstalacion() map[string]interface{}
+	EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar
 }
 
 type manager struct {
@@ -70,13 +75,16 @@ type manager struct {
 	isUpgradeRequired bool
 	deployedRelease   *rpb.Release
 	chart             *cpb.Chart
-
-	estrategia Estrategia
+	action            ManagerAction
 }
 
 // ReleaseName returns the name of the release.
 func (m manager) PreInstalacion() map[string]interface{} {
-	return m.estrategia.PreInstalacion()
+	return m.action.PreInstalacion()
+}
+
+func (m manager) EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar {
+	return m.action.EnvVars(as)
 }
 
 // ReleaseName returns the name of the release.

@@ -70,8 +70,15 @@ type AppServiceSpec struct {
 }
 
 type DatabaseStatus struct {
-	// ConnectionURL is the URL to connect to the database
-	ConnectionURL string `json:"connectionURL"`
+	// Name is the name of the database
+	Name string `json:"name"`
+
+	// Hostname is the hostname of the database
+	Hostname string `json:"hostname"`
+
+	// Port is the port of the database
+	Port string `json:"port"`
+
 	// Username is the username to connecto to the database
 	Username string `json:"username"`
 }

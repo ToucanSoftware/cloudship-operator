@@ -18,7 +18,10 @@ package release
 
 import (
 	"fmt"
+
+	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
 	"helm.sh/helm/v3/pkg/cli"
+	corev1 "k8s.io/api/core/v1"
 
 	crmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -34,11 +37,33 @@ var postgresqlValues map[string]interface{} = map[string]interface{}{
 	"postgresqlUsername": "cloudship",
 }
 
-type EstrategiaPostgresql struct{}
+type postgresqlAction struct{}
 
-func (e EstrategiaPostgresql) PreInstalacion() map[string]interface{} {
+func (e postgresqlAction) PreInstalacion() map[string]interface{} {
 	fmt.Print("Soy la estrategia de postgres")
 	return postgresqlValues
+}
+
+func (e postgresqlAction) EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar {
+	var dbURL = fmt.Sprintf("db-postgresql-headless.%s.svc.cluster.local", as.GetName())
+	return []corev1.EnvVar{
+		{
+			Name:  "DATABASE_NAME",
+			Value: "cloudship",
+		},
+		{
+			Name:  "DATABASE_HOST",
+			Value: dbURL,
+		},
+		{
+			Name:  "DATABASE_PORT",
+			Value: "5432",
+		},
+		{
+			Name:  "DATABASE_USERNAME",
+			Value: "cloudship",
+		},
+	}
 }
 
 // NewPostgreSQLManagerFactory returns a new Helm manager factory capable of installing and uninstalling PostgreSQL releases.
@@ -47,9 +72,9 @@ func NewPostgreSQLManagerFactory(mgr crmanager.Manager) ManagerFactory {
 		mgr:          mgr,
 		chartName:    postgresqlChartName,
 		chartVersion: postgresqlChartVersion,
-		//values:       postgresqlValues,
-		releaseName: "db",
-		settings:    cli.New(),
-		estrategia:  EstrategiaPostgresql{},
+		values:       postgresqlValues,
+		releaseName:  "db",
+		settings:     cli.New(),
+		action:       postgresqlAction{},
 	}
 }

@@ -35,6 +35,8 @@ import (
 	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
 	"github.com/ToucanSoftware/cloudship-operator/pkg/helm/release"
 	"github.com/ToucanSoftware/cloudship-operator/pkg/types"
+
+	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
 // AppServiceReconciler reconciles a AppService object
@@ -66,6 +68,10 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if apierrors.IsNotFound(err) {
 			log.Info("Container workload is deleted")
 		}
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	var app cloudshipv1alpha1.Application
+	if err := r.Get(ctx, k8stypes.NamespacedName{Name: appService.GetNamespace()}, &app); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -117,11 +123,15 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Error(err, "Release failed")
 			return ReconcileWaitResult, err
 		}
-		var dbStatus *cloudshipv1alpha1.DatabaseStatus = &cloudshipv1alpha1.DatabaseStatus{
-			ConnectionURL: rel.Name,
-			Username:      rel.Namespace,
-		}
 
+		var envVars = manager.EnvVars(&app)
+
+		var dbStatus *cloudshipv1alpha1.DatabaseStatus = &cloudshipv1alpha1.DatabaseStatus{
+			Name:     envVars[0].Value,
+			Hostname: envVars[1].Value,
+			Port:     envVars[2].Value,
+			Username: envVars[3].Value,
+		}
 		appService.Status.DatabaseStatusRef = dbStatus
 
 		//status := types.StatusFor(o)

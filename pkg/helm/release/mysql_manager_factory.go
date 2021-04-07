@@ -18,7 +18,10 @@ package release
 
 import (
 	"fmt"
+
+	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
 	"helm.sh/helm/v3/pkg/cli"
+	corev1 "k8s.io/api/core/v1"
 
 	crmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -30,11 +33,15 @@ const (
 
 var mysqlValues map[string]interface{} = map[string]interface{}{}
 
-type EstrategiaMySql struct{}
+type mysqlAction struct{}
 
-func (e EstrategiaMySql) PreInstalacion() map[string]interface{} {
+func (e mysqlAction) PreInstalacion() map[string]interface{} {
 	fmt.Print("Soy la estrategia de mySql")
 	return mysqlValues
+}
+
+func (e mysqlAction) EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar {
+	return nil
 }
 
 // NewMySQLManagerFactory returns a new Helm manager factory capable of installing and uninstalling MySQL releases.
@@ -43,9 +50,9 @@ func NewMySQLManagerFactory(mgr crmanager.Manager) ManagerFactory {
 		mgr:          mgr,
 		chartName:    mysqlChartName,
 		chartVersion: mysqlChartVersion,
-		//values:       mysqlValues,
-		releaseName: "db-mysql",
-		settings:    cli.New(),
-		estrategia:  EstrategiaMySql{},
+		values:       mysqlValues,
+		releaseName:  "db-mysql",
+		settings:     cli.New(),
+		action:       mysqlAction{},
 	}
 }

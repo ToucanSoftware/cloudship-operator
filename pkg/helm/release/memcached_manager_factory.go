@@ -18,8 +18,10 @@ package release
 
 import (
 	"fmt"
-	"helm.sh/helm/v3/pkg/cli"
 
+	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
+	"helm.sh/helm/v3/pkg/cli"
+	corev1 "k8s.io/api/core/v1"
 	crmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -30,11 +32,15 @@ const (
 
 var memcachedValues map[string]interface{} = map[string]interface{}{}
 
-type EstrategiaMemcached struct{}
+type memcachedActions struct{}
 
-func (e EstrategiaMemcached) PreInstalacion() map[string]interface{} {
+func (e memcachedActions) PreInstalacion() map[string]interface{} {
 	fmt.Print("Soy la estrategia de memcached")
 	return memcachedValues
+}
+
+func (e memcachedActions) EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar {
+	return nil
 }
 
 // NewMemecachedManagerFactory returns a new Helm manager factory capable of installing and uninstalling Memcached releases.
@@ -43,9 +49,9 @@ func NewMemecachedManagerFactory(mgr crmanager.Manager) ManagerFactory {
 		mgr:          mgr,
 		chartName:    memcachedChartName,
 		chartVersion: memcachedChartVersion,
-		//values:       memcachedValues,
-		releaseName: "cache-memcached",
-		settings:    cli.New(),
-		estrategia:  EstrategiaMemcached{},
+		values:       memcachedValues,
+		releaseName:  "cache-memcached",
+		settings:     cli.New(),
+		action:       memcachedActions{},
 	}
 }

@@ -97,14 +97,22 @@ spec:
               databaseStatusRef:
                 description: DatabaseStatusRef is the status of database
                 properties:
-                  connectionURL:
-                    description: ConnectionURL is the URL to connect to the database
+                  hostname:
+                    description: Hostname is the hostname of the database
+                    type: string
+                  name:
+                    description: Name is the name of the database
+                    type: string
+                  port:
+                    description: Port is the port of the database
                     type: string
                   username:
                     description: Username is the username to connecto to the database
                     type: string
                 required:
-                - connectionURL
+                - hostname
+                - name
+                - port
                 - username
                 type: object
             type: object
