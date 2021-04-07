@@ -69,8 +69,18 @@ type AppServiceSpec struct {
 	DatabaseRef *DatabaseSpec `json:"databaseRef,omitempty"`
 }
 
+type DatabaseStatus struct {
+	// ConnectionURL is the URL to connect to the database
+	ConnectionURL string `json:"connectionURL"`
+	// Username is the username to connecto to the database
+	Username string `json:"username"`
+}
+
 // AppServiceStatus defines the observed state of AppService
 type AppServiceStatus struct {
+	// DatabaseStatusRef is the status of database
+	// +optional
+	DatabaseStatusRef *DatabaseStatus `json:"databaseStatusRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true

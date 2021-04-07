@@ -27,7 +27,11 @@ const (
 	postgresqlChartVersion string = "10.3.13"
 )
 
-var postgresqlValues map[string]interface{} = map[string]interface{}{}
+var postgresqlValues map[string]interface{} = map[string]interface{}{
+	"postgresqlPassword": "123456",
+	"postgresqlDatabase": "cloudship",
+	"postgresqlUsername": "cloudship",
+}
 
 // NewPostgreSQLManagerFactory returns a new Helm manager factory capable of installing and uninstalling PostgreSQL releases.
 func NewPostgreSQLManagerFactory(mgr crmanager.Manager) ManagerFactory {

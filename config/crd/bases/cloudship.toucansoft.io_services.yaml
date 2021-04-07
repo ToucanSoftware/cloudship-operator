@@ -93,6 +93,20 @@ spec:
             type: object
           status:
             description: AppServiceStatus defines the observed state of AppService
+            properties:
+              databaseStatusRef:
+                description: DatabaseStatusRef is the status of database
+                properties:
+                  connectionURL:
+                    description: ConnectionURL is the URL to connect to the database
+                    type: string
+                  username:
+                    description: Username is the username to connecto to the database
+                    type: string
+                required:
+                - connectionURL
+                - username
+                type: object
             type: object
         type: object
     served: true

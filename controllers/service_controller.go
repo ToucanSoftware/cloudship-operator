@@ -69,33 +69,6 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	deploy, err := r.renderDeployment(ctx, &appService)
-	if err != nil {
-		log.Error(err, "Failed to render a deployment")
-		// r.record.Event(eventObj, event.Warning(errRenderWorkload, err))
-		return ReconcileWaitResult, client.IgnoreNotFound(err)
-	}
-	// server side apply, only the fields we set are touched
-	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner(appService.GetUID())}
-	if err := r.Patch(ctx, deploy, client.Apply, applyOpts...); err != nil {
-		log.Error(err, "Failed to apply to a deployment")
-		//r.record.Event(eventObj, event.Warning(errApplyDeployment, err))
-		return ReconcileWaitResult, client.IgnoreNotFound(err)
-	}
-
-	service, err := r.renderService(ctx, &appService, deploy)
-	if err != nil {
-		log.Error(err, "Failed to render a service")
-		//r.record.Event(eventObj, event.Warning(errRenderService, err))
-		return ReconcileWaitResult, client.IgnoreNotFound(err)
-	}
-	// server side apply the service
-	if err := r.Patch(ctx, service, client.Apply, applyOpts...); err != nil {
-		log.Error(err, "Failed to apply a service")
-		//r.record.Event(eventObj, event.Warning(errApplyDeployment, err))
-		return ReconcileWaitResult, client.IgnoreNotFound(err)
-	}
-
 	var overrideValues map[string]string
 	var dbManagerFactory release.ManagerFactory
 
@@ -140,8 +113,42 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Error(err, "Release failed")
 			return ReconcileWaitResult, err
 		}
+		var dbStatus *cloudshipv1alpha1.DatabaseStatus = &cloudshipv1alpha1.DatabaseStatus{
+			ConnectionURL: rel.Name,
+			Username:      rel.Namespace,
+		}
+
+		appService.Status.DatabaseStatusRef = dbStatus
+
 		//status := types.StatusFor(o)
 		log.Info(fmt.Sprintf("Database with name %s for service %s installed", rel.Name, appService.GetName()))
+	}
+
+	deploy, err := r.renderDeployment(ctx, &appService)
+	if err != nil {
+		log.Error(err, "Failed to render a deployment")
+		// r.record.Event(eventObj, event.Warning(errRenderWorkload, err))
+		return ReconcileWaitResult, client.IgnoreNotFound(err)
+	}
+	// server side apply, only the fields we set are touched
+	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner(appService.GetUID())}
+	if err := r.Patch(ctx, deploy, client.Apply, applyOpts...); err != nil {
+		log.Error(err, "Failed to apply to a deployment")
+		//r.record.Event(eventObj, event.Warning(errApplyDeployment, err))
+		return ReconcileWaitResult, client.IgnoreNotFound(err)
+	}
+
+	service, err := r.renderService(ctx, &appService, deploy)
+	if err != nil {
+		log.Error(err, "Failed to render a service")
+		//r.record.Event(eventObj, event.Warning(errRenderService, err))
+		return ReconcileWaitResult, client.IgnoreNotFound(err)
+	}
+	// server side apply the service
+	if err := r.Patch(ctx, service, client.Apply, applyOpts...); err != nil {
+		log.Error(err, "Failed to apply a service")
+		//r.record.Event(eventObj, event.Warning(errApplyDeployment, err))
+		return ReconcileWaitResult, client.IgnoreNotFound(err)
 	}
 
 	return reconcile.Result{}, nil

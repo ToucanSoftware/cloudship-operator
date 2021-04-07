@@ -86,6 +86,12 @@ func TranslateContainer(ctx context.Context, as *cloudshipv1alpha1.AppService) (
 			//Command: container.Command,
 			//Args:    container.Arguments,
 		}
+
+		if as.Status.DatabaseStatusRef != nil {
+			databaseEnvVars := renderDatabaseEnvVars(as)
+			kubernetesContainer.Env = append(kubernetesContainer.Env, databaseEnvVars...)
+		}
+
 		/*
 			if container.Resources != nil {
 				kubernetesContainer.Resources = corev1.ResourceRequirements{
@@ -301,4 +307,20 @@ func ServiceInjector(ctx context.Context, as *cloudshipv1alpha1.AppService, objs
 		break
 	}
 	return objs, nil
+}
+
+func renderDatabaseEnvVars(as *cloudshipv1alpha1.AppService) []corev1.EnvVar {
+	if as == nil || as.Status.DatabaseStatusRef == nil {
+		return nil
+	}
+	return []corev1.EnvVar{
+		{
+			Name:  "DATABASE_URL",
+			Value: as.Status.DatabaseStatusRef.ConnectionURL,
+		},
+		{
+			Name:  "DATABASE_USERNAME",
+			Value: as.Status.DatabaseStatusRef.Username,
+		},
+	}
 }
