@@ -40,12 +40,10 @@ var postgresqlValues map[string]interface{} = map[string]interface{}{
 type postgresqlAction struct{}
 
 func (e postgresqlAction) PreInstalacion() map[string]interface{} {
-	fmt.Print("Soy la estrategia de postgres")
 	return postgresqlValues
 }
 
 func (e postgresqlAction) EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar {
-	var dbURL = fmt.Sprintf("db-postgresql-headless.%s.svc.cluster.local", as.GetName())
 	return []corev1.EnvVar{
 		{
 			Name:  "DATABASE_NAME",
@@ -53,17 +51,25 @@ func (e postgresqlAction) EnvVars(as *cloudshipv1alpha1.Application) []corev1.En
 		},
 		{
 			Name:  "DATABASE_HOST",
-			Value: dbURL,
+			Value: e.Hostname(as),
 		},
 		{
 			Name:  "DATABASE_PORT",
-			Value: "5432",
+			Value: e.Port(),
 		},
 		{
 			Name:  "DATABASE_USERNAME",
 			Value: "cloudship",
 		},
 	}
+}
+
+func (e postgresqlAction) Port() string {
+	return "5432"
+}
+
+func (e postgresqlAction) Hostname(as *cloudshipv1alpha1.Application) string {
+	return fmt.Sprintf("db-postgresql-headless.%s.svc.cluster.local", as.GetName())
 }
 
 // NewPostgreSQLManagerFactory returns a new Helm manager factory capable of installing and uninstalling PostgreSQL releases.

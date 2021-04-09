@@ -75,70 +75,78 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	var overrideValues map[string]string
-	var dbManagerFactory release.ManagerFactory
+	var envVars []corev1.EnvVar = []corev1.EnvVar{}
 
-	switch appService.Spec.DatabaseRef.Type {
-	case cloudshipv1alpha1.DatabaseTypeMySQL:
-		log.Info(fmt.Sprintf("Reconcile MySQL for service %s", appService.GetName()))
-		dbManagerFactory = r.MySQLManagerFactory
-		//app.Status.Cache = "Memcached"
-	case cloudshipv1alpha1.DatabaseTypePostgreSQL:
-		log.Info(fmt.Sprintf("Reconcile PosgreSQL for application %s", appService.GetName()))
-		dbManagerFactory = r.PostgreSQLManagerFactory
-		//app.Status.Cache = "Redis"
-	default:
-		return ReconcileWaitResult, fmt.Errorf("No Manager Factory for %v", appService.Spec.DatabaseRef.Type)
+	if app.Spec.CacheRef != nil {
+		var cacheEnvVars = translateCacheEnvVars(app.Status.Cache)
+		envVars = append(envVars, cacheEnvVars...)
 	}
 
-	manager, err := dbManagerFactory.NewManager(req.Namespace, overrideValues)
-	if err != nil {
-		log.Error(err, "Failed to get release manager")
-		return ReconcileWaitResult, err
-	}
+	if appService.Spec.DatabaseRef != nil {
+		var overrideValues map[string]string
+		var dbManagerFactory release.ManagerFactory
 
-	if err := manager.Sync(ctx); err != nil {
-		log.Error(err, "Failed to sync release")
-		// status.SetCondition(types.HelmAppCondition{
-		// 	Type:    types.ConditionIrreconcilable,
-		// 	Status:  types.StatusTrue,
-		// 	Reason:  types.ReasonReconcileError,
-		// 	Message: err.Error(),
-		// })
-		// if err := r.updateResourceStatus(ctx, o, status); err != nil {
-		// 	log.Error(err, "Failed to update status after sync release failure")
-		// }
-		return ReconcileWaitResult, err
-	}
-	//	status.RemoveCondition(types.ConditionIrreconcilable)
+		switch appService.Spec.DatabaseRef.Type {
+		case cloudshipv1alpha1.DatabaseTypeMySQL:
+			log.Info(fmt.Sprintf("Reconcile MySQL for service %s", appService.GetName()))
+			dbManagerFactory = r.MySQLManagerFactory
+		case cloudshipv1alpha1.DatabaseTypePostgreSQL:
+			log.Info(fmt.Sprintf("Reconcile PosgreSQL for application %s", appService.GetName()))
+			dbManagerFactory = r.PostgreSQLManagerFactory
+		default:
+			return ReconcileWaitResult, fmt.Errorf("No Manager Factory for %v", appService.Spec.DatabaseRef.Type)
+		}
 
-	if !manager.IsInstalled() {
-		log.Info(fmt.Sprintf("Installing Database Release %s", appService.GetName()))
-
-		//TODO: acá se puede hacer lo que haya que hacer previo a la instalación.
-		manager.PreInstalacion()
-
-		rel, err := manager.InstallRelease(ctx)
+		manager, err := dbManagerFactory.NewManager(req.Namespace, overrideValues)
 		if err != nil {
-			log.Error(err, "Release failed")
+			log.Error(err, "Failed to get release manager")
 			return ReconcileWaitResult, err
 		}
 
-		var envVars = manager.EnvVars(&app)
+		if err := manager.Sync(ctx); err != nil {
+			log.Error(err, "Failed to sync release")
+			// status.SetCondition(types.HelmAppCondition{
+			// 	Type:    types.ConditionIrreconcilable,
+			// 	Status:  types.StatusTrue,
+			// 	Reason:  types.ReasonReconcileError,
+			// 	Message: err.Error(),
+			// })
+			// if err := r.updateResourceStatus(ctx, o, status); err != nil {
+			// 	log.Error(err, "Failed to update status after sync release failure")
+			// }
+			return ReconcileWaitResult, err
+		}
+		//	status.RemoveCondition(types.ConditionIrreconcilable)
 
+		if !manager.IsInstalled() {
+			log.Info(fmt.Sprintf("Installing Database Release %s", appService.GetName()))
+
+			//TODO: acá se puede hacer lo que haya que hacer previo a la instalación.
+			manager.PreInstalacion()
+
+			rel, err := manager.InstallRelease(ctx)
+			if err != nil {
+				log.Error(err, "Release failed")
+				return ReconcileWaitResult, err
+			}
+			//status := types.StatusFor(o)
+			log.Info(fmt.Sprintf("Database with name %s for service %s installed", rel.Name, appService.GetName()))
+		}
+		// Generate Environment variable for the database
+		var databaseEnvVars = manager.EnvVars(&app)
+		envVars = append(envVars, databaseEnvVars...)
+		// Refactor all of this
 		var dbStatus *cloudshipv1alpha1.DatabaseStatus = &cloudshipv1alpha1.DatabaseStatus{
 			Name:     envVars[0].Value,
-			Hostname: envVars[1].Value,
-			Port:     envVars[2].Value,
+			Hostname: manager.Hostname(&app),
+			Port:     manager.Port(),
 			Username: envVars[3].Value,
 		}
 		appService.Status.DatabaseStatusRef = dbStatus
-
-		//status := types.StatusFor(o)
-		log.Info(fmt.Sprintf("Database with name %s for service %s installed", rel.Name, appService.GetName()))
 	}
 
-	deploy, err := r.renderDeployment(ctx, &appService)
+	deploy, err := r.renderDeployment(ctx, &appService, envVars)
+
 	if err != nil {
 		log.Error(err, "Failed to render a deployment")
 		// r.record.Event(eventObj, event.Warning(errRenderWorkload, err))
@@ -165,6 +173,9 @@ func (r *AppServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ReconcileWaitResult, client.IgnoreNotFound(err)
 	}
 
+	if err := r.Status().Update(ctx, &appService); err != nil {
+		return ReconcileWaitResult, err
+	}
 	return reconcile.Result{}, nil
 }
 
@@ -177,9 +188,9 @@ func (r *AppServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // create a corresponding deployment
 func (r *AppServiceReconciler) renderDeployment(ctx context.Context,
-	appService *cloudshipv1alpha1.AppService) (*appsv1.Deployment, error) {
+	appService *cloudshipv1alpha1.AppService, envVars []corev1.EnvVar) (*appsv1.Deployment, error) {
 
-	resources, err := TranslateContainer(ctx, appService)
+	resources, err := TranslateContainer(ctx, appService, envVars)
 	if err != nil {
 		return nil, err
 	}

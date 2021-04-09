@@ -105,7 +105,9 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	log.Info(fmt.Sprintf("Application %s: Event Stream Reconcilated", req.Name))
 	log.Info(fmt.Sprintf("Application %s: Reconcilated", req.Name))
 
-	//err = r.updateResourceStatus(ctx, &app, status)
+	if err := r.Status().Update(ctx, &app); err != nil {
+		return ReconcileWaitResult, err
+	}
 	return ReconcileWaitResult, nil
 }
 
@@ -143,11 +145,9 @@ func (r *ApplicationReconciler) reconcileCache(ctx context.Context, log logr.Log
 	case cloudshipv1alpha1.CacheTypeMemcached:
 		log.Info(fmt.Sprintf("Reconcile Memcached for application %s", app.GetName()))
 		cacheManagerFactory = r.MemecachedManagerFactory
-		app.Status.Cache = "Memcached"
 	case cloudshipv1alpha1.CacheTypeRedis:
 		log.Info(fmt.Sprintf("Reconcile Redis for application %s", app.GetName()))
 		cacheManagerFactory = r.RedisManagerFactory
-		app.Status.Cache = "Redis"
 	default:
 		return fmt.Errorf("No Manager Factory for %v", app.Spec.CacheRef.Type)
 	}
@@ -160,6 +160,11 @@ func (r *ApplicationReconciler) reconcileCache(ctx context.Context, log logr.Log
 	if err != nil {
 		log.Error(err, "Failed to get release manager")
 		return err
+	}
+
+	app.Status.Cache = &cloudshipv1alpha1.CacheStatus{
+		Hostname: manager.Hostname(app),
+		Port:     manager.Port(),
 	}
 
 	return r.reconcileFromManager(ctx, log, manager, app)

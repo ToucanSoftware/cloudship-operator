@@ -71,7 +71,17 @@ spec:
             properties:
               cache:
                 description: Cache is the status of the cache
-                type: string
+                properties:
+                  hostname:
+                    description: Hostname is the hostname of the database
+                    type: string
+                  port:
+                    description: Port is the port of the database
+                    type: string
+                required:
+                - hostname
+                - port
+                type: object
               description:
                 description: Deployment is the status of the deployment of the application
                 type: string

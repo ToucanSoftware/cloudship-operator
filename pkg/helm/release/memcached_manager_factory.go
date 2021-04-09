@@ -35,12 +35,19 @@ var memcachedValues map[string]interface{} = map[string]interface{}{}
 type memcachedActions struct{}
 
 func (e memcachedActions) PreInstalacion() map[string]interface{} {
-	fmt.Print("Soy la estrategia de memcached")
 	return memcachedValues
 }
 
 func (e memcachedActions) EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar {
 	return nil
+}
+
+func (e memcachedActions) Port() string {
+	return "11211"
+}
+
+func (e memcachedActions) Hostname(as *cloudshipv1alpha1.Application) string {
+	return fmt.Sprintf("cache-memcached.%s.svc.cluster.local", as.GetName())
 }
 
 // NewMemecachedManagerFactory returns a new Helm manager factory capable of installing and uninstalling Memcached releases.

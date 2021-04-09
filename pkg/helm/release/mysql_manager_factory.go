@@ -17,8 +17,6 @@ limitations under the License.
 package release
 
 import (
-	"fmt"
-
 	cloudshipv1alpha1 "github.com/ToucanSoftware/cloudship-operator/api/v1alpha1"
 	"helm.sh/helm/v3/pkg/cli"
 	corev1 "k8s.io/api/core/v1"
@@ -36,12 +34,19 @@ var mysqlValues map[string]interface{} = map[string]interface{}{}
 type mysqlAction struct{}
 
 func (e mysqlAction) PreInstalacion() map[string]interface{} {
-	fmt.Print("Soy la estrategia de mySql")
 	return mysqlValues
 }
 
 func (e mysqlAction) EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar {
 	return nil
+}
+
+func (e mysqlAction) Port() string {
+	return ""
+}
+
+func (e mysqlAction) Hostname(as *cloudshipv1alpha1.Application) string {
+	return ""
 }
 
 // NewMySQLManagerFactory returns a new Helm manager factory capable of installing and uninstalling MySQL releases.

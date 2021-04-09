@@ -38,12 +38,19 @@ var redisValues map[string]interface{} = map[string]interface{}{}
 type redisAction struct{}
 
 func (e redisAction) PreInstalacion() map[string]interface{} {
-	fmt.Print("Soy la estrategia de redis")
 	return redisValues
 }
 
 func (e redisAction) EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar {
 	return nil
+}
+
+func (e redisAction) Port() string {
+	return ""
+}
+
+func (e redisAction) Hostname(as *cloudshipv1alpha1.Application) string {
+	return fmt.Sprintf(" .%s.svc.cluster.local", as.GetName())
 }
 
 // NewRedisManagerFactory returns a new Helm manager factory capable of installing and uninstalling Redis releases.

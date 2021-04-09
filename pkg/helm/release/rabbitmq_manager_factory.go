@@ -42,12 +42,19 @@ var rabbitMQValues map[string]interface{} = map[string]interface{}{
 type rabbitAction struct{}
 
 func (e rabbitAction) PreInstalacion() map[string]interface{} {
-	fmt.Print("\"Soy la rabbit de mySql\"")
 	return rabbitMQValues
 }
 
 func (e rabbitAction) EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar {
 	return nil
+}
+
+func (e rabbitAction) Port() string {
+	return ""
+}
+
+func (e rabbitAction) Hostname(as *cloudshipv1alpha1.Application) string {
+	return fmt.Sprintf("stream-rabbitmq-headless.%s.svc.cluster.local", as.GetName())
 }
 
 // NewRabbitMQManagerFactory returns a new Helm manager factory capable of installing and uninstalling Memcached releases.

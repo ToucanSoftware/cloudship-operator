@@ -54,6 +54,15 @@ type CacheSpec struct {
 	Type CacheType `json:"type,omitempty"`
 }
 
+// CacheStatus is the status of the cache
+type CacheStatus struct {
+	// Hostname is the hostname of the database
+	Hostname string `json:"hostname"`
+
+	// Port is the port of the database
+	Port string `json:"port"`
+}
+
 // ApplicationSpec defines the desired state of Application
 type ApplicationSpec struct {
 	// Description is the name of the application
@@ -71,7 +80,8 @@ type ApplicationSpec struct {
 // ApplicationStatus defines the observed state of Application
 type ApplicationStatus struct {
 	// Cache is the status of the cache
-	Cache string `json:"cache,omitempty"`
+	// +optional
+	Cache *CacheStatus `json:"cache,omitempty"`
 	// Deployment is the status of the deployment of the application
 	Deployment string `json:"description,omitempty"`
 }

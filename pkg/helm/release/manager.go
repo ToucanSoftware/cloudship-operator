@@ -41,9 +41,20 @@ type InstallOption func(*action.Install) error
 // UninstallOption are the options for the uninstall command
 type UninstallOption func(*action.Uninstall) error
 
+type ManagerAction interface {
+	PreInstalacion() map[string]interface{}
+	EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar
+
+	// Hostname of the installed application
+	Hostname(as *cloudshipv1alpha1.Application) string
+	// Port of the installed application
+	Port() string
+}
+
 // Manager manages a Helm release. It can install, upgrade, reconcile,
 // and uninstall a release.
 type Manager interface {
+	ManagerAction
 	ReleaseName() string
 	IsInstalled() bool
 	IsUpgradeRequired() bool
@@ -52,13 +63,6 @@ type Manager interface {
 	// UpgradeRelease(context.Context, ...UpgradeOption) (*rpb.Release, *rpb.Release, error)
 	// ReconcileRelease(context.Context) (*rpb.Release, error)
 	UninstallRelease(context.Context, ...UninstallOption) (*rpb.Release, error)
-	PreInstalacion() map[string]interface{}
-	EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar
-}
-
-type ManagerAction interface {
-	PreInstalacion() map[string]interface{}
-	EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar
 }
 
 type manager struct {
@@ -85,6 +89,14 @@ func (m manager) PreInstalacion() map[string]interface{} {
 
 func (m manager) EnvVars(as *cloudshipv1alpha1.Application) []corev1.EnvVar {
 	return m.action.EnvVars(as)
+}
+
+func (m manager) Hostname(as *cloudshipv1alpha1.Application) string {
+	return m.action.Hostname(as)
+}
+
+func (m manager) Port() string {
+	return m.action.Port()
 }
 
 // ReleaseName returns the name of the release.

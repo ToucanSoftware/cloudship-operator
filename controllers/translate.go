@@ -46,7 +46,7 @@ const (
 )
 
 //TranslateContainer transalate to kubernetes objects
-func TranslateContainer(ctx context.Context, as *cloudshipv1alpha1.AppService) ([]types.Object, error) {
+func TranslateContainer(ctx context.Context, as *cloudshipv1alpha1.AppService, envVars []corev1.EnvVar) ([]types.Object, error) {
 
 	d := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -88,8 +88,7 @@ func TranslateContainer(ctx context.Context, as *cloudshipv1alpha1.AppService) (
 		}
 
 		if as.Status.DatabaseStatusRef != nil {
-			databaseEnvVars := renderDatabaseEnvVars(as)
-			kubernetesContainer.Env = append(kubernetesContainer.Env, databaseEnvVars...)
+			kubernetesContainer.Env = append(kubernetesContainer.Env, envVars...)
 		}
 
 		/*
@@ -309,26 +308,15 @@ func ServiceInjector(ctx context.Context, as *cloudshipv1alpha1.AppService, objs
 	return objs, nil
 }
 
-func renderDatabaseEnvVars(as *cloudshipv1alpha1.AppService) []corev1.EnvVar {
-	if as == nil || as.Status.DatabaseStatusRef == nil {
-		return nil
-	}
+func translateCacheEnvVars(status *cloudshipv1alpha1.CacheStatus) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
-			Name:  "DATABASE_NAME",
-			Value: as.Status.DatabaseStatusRef.Name,
+			Name:  "CACHE_HOSTNAME",
+			Value: status.Hostname,
 		},
 		{
-			Name:  "DATABASE_HOSTNAME",
-			Value: as.Status.DatabaseStatusRef.Hostname,
-		},
-		{
-			Name:  "DATABASE_PORT",
-			Value: as.Status.DatabaseStatusRef.Port,
-		},
-		{
-			Name:  "DATABASE_USERNAME",
-			Value: as.Status.DatabaseStatusRef.Username,
+			Name:  "CACHE_PORT",
+			Value: status.Port,
 		},
 	}
 }
